@@ -58,6 +58,24 @@ Add the public deployed URL here before submission:
 
 Never commit `.streamlit/secrets.toml` or any other file containing credentials.
 
+## Sharing the project with teammates
+
+The repository contains the application code, database SQL, documentation, and
+project configuration. It does not contain `.streamlit/secrets.toml` because
+that file contains credentials.
+
+Each teammate should:
+
+1. Clone or download the repository from GitHub.
+2. Create `.streamlit/secrets.toml` using the template above.
+3. Use the same Supabase project URL and anon key shared privately by the team.
+4. Run `uv run streamlit run app.py`.
+5. Create an account and join the squad with the invite code.
+
+The SQL files only need to be run when setting up a new Supabase project. If
+the team is using the existing Life Quest Supabase project, the database is
+already configured.
+
 ## Project structure
 
 ```text
