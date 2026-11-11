@@ -76,6 +76,30 @@ The SQL files only need to be run when setting up a new Supabase project. If
 the team is using the existing Life Quest Supabase project, the database is
 already configured.
 
+### Important: app access versus Supabase dashboard access
+
+The public Streamlit link and the Supabase dashboard are separate services:
+
+- To open and use the app, teammates only need the working public link and a
+  Life Quest account. They do not need your Supabase login.
+- To program the app, teammates need access to this repository and their own
+  local `.streamlit/secrets.toml` containing the same project URL and anon key.
+- To inspect or change tables, policies, or SQL in the Supabase dashboard, add
+  each teammate as a member in Supabase **Project Settings → Team** using her
+  own email address. Never share your Supabase password or an account login.
+
+If the published link shows “Supabase is not configured”, open the deployment
+settings for the Streamlit app and add these two secrets to its Secrets field:
+
+```toml
+[supabase]
+url = "THE_EXISTING_SUPABASE_PROJECT_URL"
+anon_key = "THE_EXISTING_SUPABASE_ANON_KEY"
+```
+
+The deployed app does not read the `.streamlit/secrets.toml` file on your
+computer. After saving the deployment secrets, redeploy or restart the app.
+
 ## Project structure
 
 ```text

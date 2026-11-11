@@ -355,7 +355,13 @@ def render_dashboard() -> None:
 initialise_state()
 
 if supabase_config() is None:
-    st.error("Supabase is not configured. Add the Project URL and anon key to .streamlit/secrets.toml.")
+    st.error("Supabase is not configured for this deployment.")
+    st.info(
+        "The person who manages the Streamlit deployment must add the existing "
+        "Supabase Project URL and anon key as deployment secrets under "
+        "[supabase]. Local files named .streamlit/secrets.toml are not uploaded "
+        "automatically."
+    )
     st.stop()
 
 if not st.session_state.access_token:

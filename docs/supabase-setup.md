@@ -16,6 +16,18 @@ the Streamlit `[auth]` configuration and the Supabase project URL and anon key.
 The app must use the authenticated user's ID for every database query. It must
 never trust a user ID supplied by a widget or URL parameter.
 
+## Team access
+
+Supabase project membership is separate from app authentication. Invite each
+developer with her own email from **Project Settings → Team**. Do not share the
+owner's Supabase password. Developers can use the repository and the public
+anon key locally; dashboard changes require an appropriate project role.
+
+The public Streamlit deployment also has its own secrets configuration. Add the
+same project URL and anon key to the deployment's Secrets field under
+`[supabase]`; the local `.streamlit/secrets.toml` is intentionally ignored and
+is not deployed.
+
 ## Security rules
 
 - Users can read and update only their own profile.
