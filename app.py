@@ -2,11 +2,22 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import json
+import time
+import hashlib
+import threading
+from pathlib import Path
+
+from auth_helpers import valid_email, retry_seconds, valid_app_url, auth_error_message, verified_oauth_user
+import streamlit.components.v1 as components
 
 from datetime import date, datetime, timedelta, timezone
 from collections import Counter
 
 import streamlit as st
+from onboarding import render_onboarding
+from ai_quest_ui import render_home, render_pillar, prepare_initial_quests, fetch_quests
+from onboarding import PILLARS
+from social_play import render_social
 
 
 st.set_page_config(page_title="Life Quest", page_icon="🗺️", layout="centered")
@@ -91,6 +102,9 @@ def initialise_state() -> None:
         "squad_invite_code": None,
         "squad_error": None,
         "auth_message": None,
+        "auth_message_kind": "info",
+        "confirmation_email": "",
+        "handled_oauth_code": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -138,66 +152,197 @@ def api_request(
             message = details.get("msg") or details.get("message") or details.get("error_description") or message
         except json.JSONDecodeError:
             pass
+        if path.startswith("/auth/"):
+            code = details.get("error_code", details.get("code", "")) if isinstance(locals().get("details"), dict) else ""
+            message = auth_error_message(code, error.code)
         return None, message
-    except URLError:
+    except (URLError, TimeoutError):
         return None, "The Supabase service could not be reached. Check your internet connection."
 
 
-def authenticate(email: str, password: str, sign_up: bool) -> None:
-    if sign_up:
-        data, error = api_request("POST", "/auth/v1/signup", {"email": email, "password": password})
-        if error:
-            st.session_state.auth_message = error
-            return
-        if not isinstance(data, dict) or not data.get("access_token"):
-            st.session_state.auth_message = "Account created. Check your email before signing in."
-            return
-    else:
-        query = urlencode({"grant_type": "password"})
-        data, error = api_request("POST", f"/auth/v1/token?{query}", {"email": email, "password": password})
-        if error:
-            st.session_state.auth_message = error
-            return
+def auth_notice(message: str, kind: str = "info") -> None:
+    st.session_state.auth_message = message
+    st.session_state.auth_message_kind = kind
 
+
+@st.cache_resource
+def email_attempts():
+    # Shared across browser sessions on this server; Supabase enforces global limits.
+    return {}, threading.Lock()
+
+
+def email_cooldown(email: str, reserve: bool = False) -> int:
+    attempts, lock = email_attempts()
+    key = hashlib.sha256(email.strip().lower().encode()).hexdigest()
+    now = time.time()
+    with lock:
+        for old_key in list(attempts):
+            if now - attempts[old_key] >= 3600:
+                del attempts[old_key]
+        remaining = retry_seconds(attempts.get(key, 0), now)
+        if reserve and not remaining:
+            attempts[key] = now
+        return remaining
+
+
+def app_redirect_url() -> str | None:
+    try:
+        value = json.loads((Path(__file__).parent / "auth_config.json").read_text())["app_url"]
+        return value if isinstance(value, str) and valid_app_url(value) else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def confirmation_path(endpoint: str) -> str:
+    redirect = app_redirect_url()
+    return endpoint + ("?" + urlencode({"redirect_to": redirect}) if redirect else "")
+
+
+def authenticate(email: str, password: str, sign_up: bool) -> None:
+    email = email.strip()
+    if sign_up:
+        remaining = email_cooldown(email, reserve=True)
+        if remaining:
+            auth_notice(f"Please wait {remaining} seconds before requesting another confirmation.", "warning")
+            return
+        st.session_state.confirmation_email = email
+        data, error = api_request("POST", confirmation_path("/auth/v1/signup"), {"email": email, "password": password})
+    else:
+        data, error = api_request("POST", "/auth/v1/token?grant_type=password", {"email": email, "password": password})
+    if error:
+        st.session_state.confirmation_email = email
+        auth_notice(error, "error")
+        return
     if isinstance(data, dict) and data.get("access_token") and data.get("user"):
         st.session_state.access_token = data["access_token"]
         st.session_state.user = data["user"]
+        st.session_state.profile = None
         st.session_state.auth_message = None
         st.rerun()
+    elif sign_up:
+        auth_notice("Registration request accepted. If this address needs confirmation, check your inbox and spam folder. Delivery is not yet confirmed. After confirming, return here and log in.")
     else:
-        st.session_state.auth_message = (
-            "The account exists, but Supabase did not return a login session. "
-            "Confirm the email and try again."
-        )
+        auth_notice("Sign-in could not be completed. Please try again.", "error")
+
+
+def resend_confirmation(email: str) -> None:
+    email = email.strip()
+    if not valid_email(email):
+        auth_notice("Enter a valid email address to request a confirmation.", "error")
+        return
+    remaining = email_cooldown(email, reserve=True)
+    if remaining:
+        auth_notice(f"Please wait {remaining} seconds before trying again.", "warning")
+        return
+    _, error = api_request("POST", confirmation_path("/auth/v1/resend"), {"type": "signup", "email": email})
+    if error:
+        auth_notice(error, "error")
+    else:
+        auth_notice("Request accepted. If this address has an unconfirmed account, a new confirmation email will be requested. Check your inbox and spam folder; delivery is not guaranteed by this message.")
+
+
+@st.fragment(run_every="1s")
+def render_confirmation_help() -> None:
+    with st.expander("Didn't receive a confirmation email?", expanded=bool(st.session_state.confirmation_email)):
+        email = st.text_input("Confirmation email address", key="confirmation_email")
+        remaining = email_cooldown(email) if valid_email(email) else 0
+        label = f"Try again in {remaining}s" if remaining else "Resend confirmation email"
+        if st.button(label, disabled=bool(remaining), key="resend_confirmation"):
+            resend_confirmation(email)
+            st.rerun()
+        st.caption("Check spam and your organisation's email quarantine. Repeated requests do not make delivery faster. Already confirmed? Use Log in above.")
+
+
+_google_component = components.declare_component("lifequest_google", path=str(Path(__file__).parent / "auth_component"))
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def google_available(base_url: str) -> bool:
+    settings, error = api_request("GET", "/auth/v1/settings")
+    return not error and isinstance(settings, dict) and settings.get("external", {}).get("google") is True
+
+
+def render_google_login() -> None:
+    config = supabase_config()
+    redirect = app_redirect_url()
+    code = st.query_params.get("code")
+    if st.query_params.get("error"):
+        auth_notice("Google sign-in was cancelled or could not be completed. Please try again.", "warning")
+        for key in ("error", "error_description", "error_code"):
+            if key in st.query_params:
+                del st.query_params[key]
+    enabled = bool(config and redirect and google_available(config[0]))
+    if not enabled and not code:
+        st.button("Continue with Google", disabled=True)
+        st.caption("Google sign-in is not available yet. Please use email and password.")
+        return
+    if not config or not redirect:
+        auth_notice("Google sign-in is not configured for this app address.", "error")
+        return
+    result = _google_component(supabase_url=config[0], public_key=config[1],
+                               redirect_url=redirect, enabled=enabled, code=code, key="google_login")
+    if not isinstance(result, dict) or not code or result.get("code") != code:
+        return
+    if st.session_state.handled_oauth_code == code:
+        return
+    st.session_state.handled_oauth_code = code
+    if "code" in st.query_params:
+        del st.query_params["code"]
+    token = result.get("access_token")
+    if not isinstance(token, str) or not token:
+        auth_notice("Google sign-in could not be completed. Start again in the same browser.", "error")
+        return
+    user = verified_oauth_user(token, api_request)
+    if user is None:
+        auth_notice("Google sign-in could not be verified. Please try again.", "error")
+        return
+    st.session_state.access_token = token
+    st.session_state.user = user
+    st.session_state.profile = None
+    st.session_state.auth_message = None
+    st.rerun()
+
+
+def navigate_auth(page: str) -> None:
+    st.query_params["auth"] = page
+    st.session_state.auth_message = None
+    st.rerun()
 
 
 def render_auth() -> None:
-    st.title("🌱 Welcome to Life Quest")
-    st.subheader("Turn your everyday life into an adventure")
-
-    st.write(
-        "Life Quest helps you build better habits, discover new experiences, "
-        "and grow through small daily challenges. Complete quests, earn points, "
-        "level up, and stay motivated with friends. "
-        "Because every small step brings you closer to your goals."
-    )
-
-    st.write("Create an account to begin your adventure!")
-
-    with st.form("auth_form"):
+    signing_up = st.query_params.get("auth") == "signup"
+    st.title("🌱 Create your Life Quest account" if signing_up else "🌱 Welcome to Life Quest")
+    st.subheader("Your adventure starts here" if signing_up else "Turn your everyday life into an adventure")
+    st.write("Build better habits, discover new experiences, and grow through small daily challenges. Complete quests, earn points, and level up with friends.")
+    render_google_login()
+    st.divider()
+    st.caption("Or create an account with email" if signing_up else "Or log in with email")
+    with st.form("signup_form" if signing_up else "login_form"):
         email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        login = st.form_submit_button("Log in", type="primary")
-        sign_up = st.form_submit_button("Create account")
-
-    if login or sign_up:
-        if not email.strip() or len(password) < 6:
-            st.error("Enter a valid email and a password with at least 6 characters.")
+        password = st.text_input("Password", type="password",
+                                 help="Use at least 8 characters." if signing_up else None)
+        confirmation = st.text_input("Confirm password", type="password") if signing_up else None
+        submitted = st.form_submit_button("Create account" if signing_up else "Log in", type="primary")
+    if submitted:
+        if not valid_email(email) or not password:
+            auth_notice("Enter a valid email address and your password.", "error")
+        elif signing_up and len(password) < 8:
+            auth_notice("Choose a password with at least 8 characters.", "error")
+        elif signing_up and password != confirmation:
+            auth_notice("Passwords do not match. Please enter the same password in both fields.", "error")
         else:
-            authenticate(email.strip(), password, sign_up)
-
-    if st.session_state.auth_message: 
-        st.info(st.session_state.auth_message)
+            authenticate(email, password, signing_up)
+    if st.session_state.auth_message:
+        getattr(st, st.session_state.auth_message_kind)(st.session_state.auth_message)
+    if signing_up:
+        st.caption("Already have an account?")
+        if st.button("Back to log in"):
+            navigate_auth("login")
+    else:
+        st.caption("New to Life Quest?")
+        if st.button("Create a new account"):
+            navigate_auth("signup")
+    render_confirmation_help()
 
 
 def load_user_data() -> bool:
@@ -217,13 +362,20 @@ def load_user_data() -> bool:
         return False
     st.session_state.challenges = challenges or []
 
-    completed_query = urlencode({"select": "challenge_id,completed_at", "user_id": f"eq.{user_id}"})
+    completed_query = urlencode({"select": "challenge_id,completed_at:created_at", "user_id": f"eq.{user_id}"})
     completed, error = api_request("GET", f"/rest/v1/completed_challenges?{completed_query}", access_token=token)
     if error:
         st.error(error)
         return False
+    st.session_state.legacy_completions = completed or []
     st.session_state.completed_challenges = {row["challenge_id"] for row in completed or []}
     st.session_state.completion_dates = [row["completed_at"] for row in completed or [] if row.get("completed_at")]
+    ai_rows, ai_error = fetch_quests(api_request)
+    st.session_state.ai_completed_count = 0
+    if not ai_error:
+        finished = [q for q in ai_rows if q["status"] == "completed"]
+        st.session_state.ai_completed_count = len(finished)
+        st.session_state.completion_dates.extend(q["completed_at"] for q in finished if q.get("completed_at"))
 
     leaderboard, error = api_request(
         "POST", "/rest/v1/rpc/get_weekly_leaderboard", {}, access_token=token
@@ -241,37 +393,31 @@ def load_user_data() -> bool:
     return True
 
 
-def save_profile(location: str, categories: list[str]) -> None:
-    user = st.session_state.user
-    profile = {
-        "id": user["id"],
-        "display_name": user.get("email", "Life Quest user").split("@")[0],
-        "location": location.strip(),
-        "selected_categories": categories,
-    }
-    data, error = api_request("POST", "/rest/v1/profiles", profile, st.session_state.access_token)
+def save_onboarding(nickname: str, location: str, categories: list[str], levels: dict) -> bool:
+    token = st.session_state.access_token
+    answers = {"version": 1, "nickname": nickname, "categories": categories,
+               "levels": levels, "completed": True}
+    user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers}}, token)
     if error:
-        st.error(error)
-        return
+        st.error("We couldn’t save your answers. " + error)
+        return False
+    if isinstance(user, dict) and user.get("id"):
+        st.session_state.user = user
+    profile = {"id": st.session_state.user["id"], "display_name": nickname,
+               "location": location.strip(), "selected_categories": categories}
+    data, error = api_request("POST", "/rest/v1/profiles", profile, token)
+    if error:
+        st.error("We couldn’t save your profile. " + error)
+        return False
     st.session_state.profile = data[0] if isinstance(data, list) and data else profile
-    st.rerun()
+    notice = prepare_initial_quests(api_request)
+    if notice:
+        st.session_state.ai_notice = notice
+    return True
 
 
 def render_profile_setup() -> None:
-    st.title("Complete your profile")
-    st.write("Tell us where you are and which areas you would like to improve.")
-    categories = ["Adventure", "Finance", "Fitness", "Health", "Languages", "Personal Growth", "Social"]
-
-    with st.form("profile_form"):
-        location = st.text_input("Where are you currently?", placeholder="e.g. Lisbon")
-        selected = st.multiselect("Which areas would you like to improve?", categories, default=categories)
-        submitted = st.form_submit_button("Start your quest", type="primary")
-
-    if submitted:
-        if not location.strip() or not selected:
-            st.error("Enter your location and choose at least one area.")
-        else:
-            save_profile(location, selected)
+    render_onboarding(save_onboarding)
 
 
 def complete_challenge(challenge_id: int) -> None:
@@ -321,48 +467,9 @@ def join_squad(invite_code: str) -> None:
 
 
 def render_squad() -> None:
-    st.divider()
-    st.subheader("Squad mode")
-    if st.session_state.squad_error:
-        st.warning(
-            "Squad mode is ready, but the squad list could not be loaded yet. "
-            "You can still try creating or joining a squad."
-        )
-    if st.session_state.squad:
-        squad_name = st.session_state.squad[0]["squad_name"]
-        st.write(f"You are in **{squad_name}**.")
-        st.info(f"Invite code: **{st.session_state.squad_invite_code}**")
-        members = [
-            {
-                "Member": member["display_name"],
-                "Points": member["member_points"],
-            }
-            for member in st.session_state.squad
-        ]
-        st.dataframe(members, hide_index=True, width="stretch", alt="Squad members and points")
-        return
+    render_social(api_request)
 
-    st.write("Create a squad with friends or join one using an invite code.")
-    create_column, join_column = st.columns(2)
-    with create_column:
-        with st.form("create_squad_form"):
-            squad_name = st.text_input("New squad name")
-            create = st.form_submit_button("Create squad", type="primary")
-        if create:
-            if len(squad_name.strip()) < 2:
-                st.error("The squad name must have at least 2 characters.")
-            else:
-                create_squad(squad_name)
 
-    with join_column:
-        with st.form("join_squad_form"):
-            invite_code = st.text_input("Invite code")
-            join = st.form_submit_button("Join squad")
-        if join:
-            if not invite_code.strip():
-                st.error("Enter an invite code.")
-            else:
-                join_squad(invite_code)
 def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[int]]:
     days = []
 
@@ -392,192 +499,74 @@ def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[in
     ]
 
     return len(days), streak, weekly_counts
-def render_quests() -> None:
+def render_settings() -> None:
     profile = st.session_state.profile
-    selected_categories = set(profile.get("selected_categories", []))
-    challenges = [
-        challenge for challenge in st.session_state.challenges
-        if challenge["category"] in selected_categories
-    ]
+    st.title("Your profile")
+    st.write(f"**{profile.get('display_name', 'Quest explorer')}**")
+    st.caption(f"{profile.get('points', 0)} XP · {profile.get('location') or 'Your next chapter starts here'}")
+    st.subheader("Notifications")
+    reminders = st.toggle("Daily email reminders", value=bool(profile.get("email_reminders", False)))
+    if reminders != bool(profile.get("email_reminders", False)):
+        query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
+        _, error = api_request("PATCH", f"/rest/v1/profiles?{query}",
+                               {"email_reminders": reminders}, st.session_state.access_token)
+        if error:
+            st.error("We couldn’t save your notification setting. Please try again.")
+        else:
+            profile["email_reminders"] = reminders
+    st.caption("Your selected pillars, starting levels and quest feedback personalise your quests. "
+               "AI requests go through Requesty and its free model provider; your name and email are not sent.")
+    if st.button("Log out"):
+        st.session_state.clear()
+        st.rerun()
 
-    if not challenges:
-        st.info("No challenges are available for your selected areas yet.")
 
-    for challenge in challenges:
-        challenge_id = challenge["id"]
-        challenge_column, action_column = st.columns([4, 1])
-        challenge_column.write(f"**{challenge['title']}** · {challenge['category']}")
-        challenge_column.caption(f"{challenge['description']} (+{challenge['points']} points)")
-
-        if challenge_id in st.session_state.completed_challenges:
-            action_column.success("Completed")
-        elif action_column.button("Complete", key=f"complete_{challenge_id}"):
-            complete_challenge(challenge_id)
 def render_dashboard() -> None:
     profile = st.session_state.profile
-    points = profile.get("points", 0)
-    level = points // 100 + 1
-    progress = (points % 100) / 100
-
-    with st.sidebar:
-        st.header("🌲 Life Quest")
-
-        page = st.radio(
-            "Navigation",
-            ["🏠 Home", "✅ Quests", "👥 Squad", "🏆 Leaderboard"],
-            key="current_page",
-        )
-
-        st.divider()
-        st.header("Profile")
-        st.write(f"📍 {profile.get('location', 'Not set')}")
-        st.write(f"**{points} points** · Level {level}")
-
-        st.divider()
-        st.subheader("🌍 Settings")
-        st.subheader("🔔 Notifications")
-
-        if "email_reminders" not in st.session_state:
-            st.session_state.email_reminders = bool(
-                profile.get("email_reminders", False)
-            )
-
-        email_reminders = st.toggle(
-            "Daily email reminders",
-            key="email_reminders",
-            help="Receive reminders to complete your daily quests.",
-        )
-        if email_reminders != bool(profile.get("email_reminders", False)):
-            query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
-            _, error = api_request(
-                "PATCH",
-                f"/rest/v1/profiles?{query}",
-                {"email_reminders": email_reminders},
-                st.session_state.access_token,
-            )
-            if error:
-                st.error(f"Could not save reminder setting: {error}")
-            else:
-                profile["email_reminders"] = email_reminders
-
-        if email_reminders:
-            st.caption("Email reminders are enabled in your settings.")    
-
-
-        st.selectbox(
-            "Language",
-            ["🇬🇧 English", "🇵🇹 Português", "🇫🇷 Français", "🇩🇪 Deutsch"],
-            key="language",
-        )
-
-        if st.button("Log out"):
-            for key in ("access_token", "user", "profile", "challenges", "leaderboard", "squad", "squad_invite_code", "squad_error"):
-                st.session_state[key] = None if key in ("access_token", "user", "profile", "squad_invite_code", "squad_error") else []
-            st.session_state.completed_challenges = set()
-            st.rerun()
-
-    if page == "👥 Squad":
+    categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
+    pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
+    pages = ["🏠 Home", *pillar_pages, "👥 Squad", "🏆 Leaderboard", "⚙️ Settings"]
+    if st.session_state.get("current_page") not in pages:
+        st.session_state.current_page = "🏠 Home"
+    st.markdown("""<style>
+    .stMainBlockContainer {max-width:900px;padding-top:2rem;padding-bottom:115px;}
+    .st-key-bottom_navigation {position:fixed;bottom:0;left:0;right:0;z-index:999;
+       background:rgba(255,255,255,.97);border-top:1px solid #dbe9e0;
+       padding:12px max(14px, calc((100vw - 900px)/2));padding-bottom:max(12px,env(safe-area-inset-bottom));
+       box-shadow:0 -4px 24px #173d2610;}
+    .st-key-bottom_navigation [role="radiogroup"] {display:flex;flex-wrap:nowrap!important;
+       gap:10px;overflow-x:auto;scrollbar-width:thin;padding:3px 0;}
+    .st-key-bottom_navigation [role="radiogroup"] label {white-space:nowrap;border-radius:15px;
+       padding:9px 13px;margin:0;background:#f3f8f4;border:1px solid #e0ebe3;}
+    .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#dff2e6;border-color:#245c43;}
+    .st-key-bottom_navigation [data-testid="stRadioOption"]>div>div:first-child {display:none!important;}
+    .st-key-bottom_navigation [data-testid="stRadioOption"][data-selected="true"] {background:#dff2e6;border-color:#245c43;}
+    .st-key-bottom_navigation [data-testid="stRadioOption"]>div {gap:0!important;}
+    div[data-testid="stVerticalBlockBorderWrapper"] {border-radius:20px;}
+    div.stButton>button {border-radius:12px;min-height:42px;}
+    </style>""", unsafe_allow_html=True)
+    with st.container(key="bottom_navigation"):
+        page = st.radio("Explore Life Quest", pages, key="current_page", horizontal=True, label_visibility="collapsed")
+    if page == "🏠 Home":
+        render_home(api_request)
+    elif page in pillar_pages:
+        render_pillar(api_request, pillar_pages[page])
+    elif page == "👥 Squad":
         render_squad()
-        return
-
-    st.title("Life Quest")
-    if page == "✅ Quests":
-        st.subheader("Your quests")
-        render_quests()
-        return
-    st.write(f"Your adventure in **{profile.get('location', 'your area')}** starts now.")
-    first, second, third = st.columns(3)
-    first.metric("Points", points)
-    second.metric("Level", level)
-    third.metric("Completed quests", len(st.session_state.completed_challenges))
-    st.progress(progress, text=f"{100 - points % 100} points to the next level")
-
-    st.divider()
-    if st.session_state.get("current_page", "🏠 Home") == "🏆 Leaderboard":
-        st.subheader("Weekly leaderboard")
-        st.caption("Points earned since the start of this week")
-        if st.session_state.leaderboard:
-            leaderboard_rows = [
-                {
-                "Rank": position,
-                "Player": row["display_name"],
-                "Points": row["weekly_points"],
-                "Quests": row["quests_completed"],
-                }
-                for position, row in enumerate(st.session_state.leaderboard, start=1)
-            ]
-            st.dataframe(
-                leaderboard_rows,
-                hide_index=True,
-                width="stretch",
-                alt="Weekly Life Quest leaderboard",
-            )
+    elif page == "⚙️ Settings":
+        render_settings()
+    elif page == "🏆 Leaderboard":
+        st.title("Weekly leaderboard")
+        st.caption("XP earned since the start of this week")
+        leaderboard, error = api_request("POST", "/rest/v1/rpc/get_weekly_leaderboard", {}, st.session_state.access_token)
+        if error:
+            st.error("The leaderboard could not be loaded. Please try again.")
+        elif leaderboard:
+            st.dataframe([{"Rank":i,"Player":row["display_name"],"XP":row["weekly_points"],"Quests":row["quests_completed"]}
+                          for i,row in enumerate(leaderboard,1)],hide_index=True,use_container_width=True)
         else:
-            st.info("Complete a quest to appear on the weekly leaderboard.")
+            st.info("Complete a quest to appear on this week’s leaderboard.")
 
-    if page != "🏠 Home":
-        return
-
-    st.subheader("📊 Your Statistics")
-    period = st.segmented_control(
-        "View statistics by",
-        ["Day", "Week", "Month"],
-        default="Week",
-    )
-
-    total_quests, streak, weekly_counts = calculate_statistics(
-        st.session_state.completion_dates
-    )
-
-    today = datetime.now(timezone.utc).date()
-
-    if period == "Day":
-        days_to_show = 1
-    elif period == "Week":
-        days_to_show = 7
-    else:
-        days_to_show = 30
-
-    activity_counts = []
-
-    for offset in range(days_to_show - 1, -1, -1):
-        selected_day = today - timedelta(days=offset)
-
-        count = sum(
-            1
-            for value in st.session_state.completion_dates
-            if datetime.fromisoformat(
-                value.replace("Z", "+00:00")
-            ).date() == selected_day
-        )
-
-        activity_counts.append(
-            {"Date": selected_day, "Quests": count}
-        )
-
-    period_quests = sum(row["Quests"] for row in activity_counts)
-    average_quests = period_quests / days_to_show
-
-    stat1, stat2, stat3 = st.columns(3)
-    stat1.metric("Total XP", points)
-    stat2.metric("Quests in period", period_quests)
-    stat3.metric("🔥 Daily streak", f"{streak} days")
-
-    st.metric("Average quests per day", f"{average_quests:.1f}")
-
-    st.write(f"**Quest activity — {period}**")
-
-    st.bar_chart(
-        activity_counts,
-        x="Date",
-        y="Quests",
-        x_label="Date",
-        y_label="Quests completed",
-    )
-    st.divider()
-    
-    
-    
 
 initialise_state()
 

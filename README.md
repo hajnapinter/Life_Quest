@@ -19,12 +19,15 @@ Add the public deployed URL here before submission:
 ## Main features
 
 - Email account creation and login through Supabase Auth.
-- Personal profiles with location and selected life areas.
-- Challenges loaded from the Supabase database.
+- Step-by-step onboarding with nickname, selected pillars and starting levels.
+- Five renewable, one-line checkbox quests per selected pillar, with persistent XP.
+- Free-only Requesty AI variations with a practical habit-library fallback.
+- Per-pillar activity charts, completion history and growth targets.
 - Secure challenge completion with persistent points.
 - Weekly leaderboard based on points earned during the current week.
 - Squad creation and invite-code based joining.
-- Shared squad member progress.
+- Shared weekly squad quests with two-participant confirmation.
+- Accepted friend invitations, shared daily 1v1 challenges and weekly results.
 
 ## Tech stack
 
@@ -43,11 +46,11 @@ Add the public deployed URL here before submission:
    anon_key = "YOUR_SUPABASE_ANON_KEY"
    ```
 
-3. Run the SQL files in `supabase/` in the Supabase SQL Editor.
+3. For the existing shared Supabase project, the migrations are already applied. Do not rerun `schema.sql`. For a new project, follow the ordered steps in [the team setup guide](docs/team-setup.md).
 4. Start the app:
 
    ```bash
-   uv run streamlit run app.py
+   uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502
    ```
 
 5. Run the tests:
@@ -69,7 +72,7 @@ Each teammate should:
 1. Clone or download the repository from GitHub.
 2. Create `.streamlit/secrets.toml` using the template above.
 3. Use the same Supabase project URL and anon key shared privately by the team.
-4. Run `uv run streamlit run app.py`.
+4. Run `uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502`.
 5. Create an account and join the squad with the invite code.
 
 The SQL files only need to be run when setting up a new Supabase project. If
@@ -109,3 +112,19 @@ supabase/*-function.sql        Incremental database functions
 docs/product-rules.md          Product rules and acceptance examples
 docs/supabase-setup.md          Supabase setup and security notes
 ```
+
+## Confirmation email and Google sign-in
+
+The login screen supports confirmation-email resend with a 60-second cooldown,
+clear authentication errors and Google OAuth with PKCE. Google activates only
+after its provider is configured in Supabase. Custom SMTP is configured in
+Supabase, not in the Streamlit code. See [the setup guide](docs/supabase-setup.md)
+for SMTP/domain setup, Google Cloud credentials, redirects and verification.
+Set the public app URL in `auth_config.json` for each deployment.
+
+## Current team handoff
+
+See [docs/team-setup.md](docs/team-setup.md) for the exact local start command,
+private configuration, database migration order and validation checks. No server
+credentials are included in the repository. The local app URL is
+`http://127.0.0.1:8502/`; it is not a publicly hosted deployment.
