@@ -3,11 +3,80 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import json
 
+from datetime import date, datetime, timedelta, timezone
+from collections import Counter
+
 import streamlit as st
 
 
 st.set_page_config(page_title="Life Quest", page_icon="🗺️", layout="centered")
 
+st.markdown(
+      """
+    <style>
+    .stApp {
+        background-color: #FFFFFF;
+        color: #243B2D;
+    }
+
+    h1, h2, h3 {
+        color: #245C43;
+    }
+
+    /* Forest green buttons */
+    div.stButton > button[kind="primary"],
+    div.stFormSubmitButton > button[kind="primary"] {
+        background-color: #245C43 !important;
+        color: #FFFFFF !important;
+        border: none;
+        border-radius: 12px;
+    }
+
+    div.stButton > button:hover,
+    div.stFormSubmitButton > button:hover {
+        border-color: #245C43;
+        color: #245C43;
+    }
+
+    /* Mint statistics cards */
+    div[data-testid="stMetric"] {
+        background-color: #DFF7EA;
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    /* Mint sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #DFF7EA;
+    }
+
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #245C43;
+    }
+
+    /* Forest green progress bar */
+    div[data-testid="stProgress"] div[role="progressbar"] > div {
+        background-color: #245C43 !important;
+    }
+
+    /* Forest green selected statistics controls */
+    div[data-testid="stSegmentedControl"] button[aria-pressed="true"] {
+        background-color: #245C43 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Mint table borders */
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #C7EEDC;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 def initialise_state() -> None:
     defaults = {
@@ -16,6 +85,7 @@ def initialise_state() -> None:
         "profile": None,
         "challenges": [],
         "completed_challenges": set(),
+        "completion_dates": [],
         "leaderboard": [],
         "squad": [],
         "squad_invite_code": None,
@@ -102,9 +172,17 @@ def authenticate(email: str, password: str, sign_up: bool) -> None:
 
 
 def render_auth() -> None:
-    st.title("Life Quest")
-    st.subheader("Turn your life into an adventure")
-    st.write("Create an account to save your quests and progress.")
+    st.title("🌱 Welcome to Life Quest")
+    st.subheader("Turn your everyday life into an adventure")
+
+    st.write(
+        "Life Quest helps you build better habits, discover new experiences, "
+        "and grow through small daily challenges. Complete quests, earn points, "
+        "level up, and stay motivated with friends. "
+        "Because every small step brings you closer to your goals."
+    )
+
+    st.write("Create an account to begin your adventure!")
 
     with st.form("auth_form"):
         email = st.text_input("Email")
@@ -118,7 +196,7 @@ def render_auth() -> None:
         else:
             authenticate(email.strip(), password, sign_up)
 
-    if st.session_state.auth_message:
+    if st.session_state.auth_message: 
         st.info(st.session_state.auth_message)
 
 
@@ -139,12 +217,13 @@ def load_user_data() -> bool:
         return False
     st.session_state.challenges = challenges or []
 
-    completed_query = urlencode({"select": "challenge_id", "user_id": f"eq.{user_id}"})
+    completed_query = urlencode({"select": "challenge_id,completed_at", "user_id": f"eq.{user_id}"})
     completed, error = api_request("GET", f"/rest/v1/completed_challenges?{completed_query}", access_token=token)
     if error:
         st.error(error)
         return False
     st.session_state.completed_challenges = {row["challenge_id"] for row in completed or []}
+    st.session_state.completion_dates = [row["completed_at"] for row in completed or [] if row.get("completed_at")]
 
     leaderboard, error = api_request(
         "POST", "/rest/v1/rpc/get_weekly_leaderboard", {}, access_token=token
@@ -284,50 +363,43 @@ def render_squad() -> None:
                 st.error("Enter an invite code.")
             else:
                 join_squad(invite_code)
+def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[int]]:
+    days = []
 
+    for value in completion_dates:
+        completed_day = datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        ).date()
+        days.append(completed_day)
 
-def render_dashboard() -> None:
+    today = datetime.now(timezone.utc).date()
+    completed_days = set(days)
+
+    streak = 0
+    current_day = today
+
+    # Keep yesterday's streak if no quest was completed today.
+    if current_day not in completed_days:
+        current_day -= timedelta(days=1)
+
+    while current_day in completed_days:
+        streak += 1
+        current_day -= timedelta(days=1)
+
+    weekly_counts = [
+        days.count(today - timedelta(days=offset))
+        for offset in range(6, -1, -1)
+    ]
+
+    return len(days), streak, weekly_counts
+def render_quests() -> None:
     profile = st.session_state.profile
-    points = profile.get("points", 0)
-    level = points // 100 + 1
-    progress = (points % 100) / 100
-
-    st.title("Life Quest")
-    st.write(f"Your adventure in **{profile.get('location', 'your area')}** starts now.")
-    first, second, third = st.columns(3)
-    first.metric("Points", points)
-    second.metric("Level", level)
-    third.metric("Completed quests", len(st.session_state.completed_challenges))
-    st.progress(progress, text=f"{100 - points % 100} points to the next level")
-
-    st.divider()
-    st.subheader("Weekly leaderboard")
-    st.caption("Points earned since the start of this week")
-    if st.session_state.leaderboard:
-        leaderboard_rows = [
-            {
-                "Rank": position,
-                "Player": row["display_name"],
-                "Points": row["weekly_points"],
-                "Quests": row["quests_completed"],
-            }
-            for position, row in enumerate(st.session_state.leaderboard, start=1)
-        ]
-        st.dataframe(
-            leaderboard_rows,
-            hide_index=True,
-            width="stretch",
-            alt="Weekly Life Quest leaderboard",
-        )
-    else:
-        st.info("Complete a quest to appear on the weekly leaderboard.")
-
-    render_squad()
-
-    st.divider()
-    st.subheader("Your quests")
     selected_categories = set(profile.get("selected_categories", []))
-    challenges = [challenge for challenge in st.session_state.challenges if challenge["category"] in selected_categories]
+    challenges = [
+        challenge for challenge in st.session_state.challenges
+        if challenge["category"] in selected_categories
+    ]
+
     if not challenges:
         st.info("No challenges are available for your selected areas yet.")
 
@@ -336,21 +408,176 @@ def render_dashboard() -> None:
         challenge_column, action_column = st.columns([4, 1])
         challenge_column.write(f"**{challenge['title']}** · {challenge['category']}")
         challenge_column.caption(f"{challenge['description']} (+{challenge['points']} points)")
+
         if challenge_id in st.session_state.completed_challenges:
             action_column.success("Completed")
         elif action_column.button("Complete", key=f"complete_{challenge_id}"):
             complete_challenge(challenge_id)
+def render_dashboard() -> None:
+    profile = st.session_state.profile
+    points = profile.get("points", 0)
+    level = points // 100 + 1
+    progress = (points % 100) / 100
 
     with st.sidebar:
+        st.header("🌲 Life Quest")
+
+        page = st.radio(
+            "Navigation",
+            ["🏠 Home", "✅ Quests", "👥 Squad", "🏆 Leaderboard"],
+            key="current_page",
+        )
+
+        st.divider()
         st.header("Profile")
         st.write(f"📍 {profile.get('location', 'Not set')}")
         st.write(f"**{points} points** · Level {level}")
+
+        st.divider()
+        st.subheader("🌍 Settings")
+        st.subheader("🔔 Notifications")
+
+        if "email_reminders" not in st.session_state:
+            st.session_state.email_reminders = bool(
+                profile.get("email_reminders", False)
+            )
+
+        email_reminders = st.toggle(
+            "Daily email reminders",
+            key="email_reminders",
+            help="Receive reminders to complete your daily quests.",
+        )
+        if email_reminders != bool(profile.get("email_reminders", False)):
+            query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
+            _, error = api_request(
+                "PATCH",
+                f"/rest/v1/profiles?{query}",
+                {"email_reminders": email_reminders},
+                st.session_state.access_token,
+            )
+            if error:
+                st.error(f"Could not save reminder setting: {error}")
+            else:
+                profile["email_reminders"] = email_reminders
+
+        if email_reminders:
+            st.caption("Email reminders are enabled in your settings.")    
+
+
+        st.selectbox(
+            "Language",
+            ["🇬🇧 English", "🇵🇹 Português", "🇫🇷 Français", "🇩🇪 Deutsch"],
+            key="language",
+        )
+
         if st.button("Log out"):
             for key in ("access_token", "user", "profile", "challenges", "leaderboard", "squad", "squad_invite_code", "squad_error"):
                 st.session_state[key] = None if key in ("access_token", "user", "profile", "squad_invite_code", "squad_error") else []
             st.session_state.completed_challenges = set()
             st.rerun()
 
+    if page == "👥 Squad":
+        render_squad()
+        return
+
+    st.title("Life Quest")
+    if page == "✅ Quests":
+        st.subheader("Your quests")
+        render_quests()
+        return
+    st.write(f"Your adventure in **{profile.get('location', 'your area')}** starts now.")
+    first, second, third = st.columns(3)
+    first.metric("Points", points)
+    second.metric("Level", level)
+    third.metric("Completed quests", len(st.session_state.completed_challenges))
+    st.progress(progress, text=f"{100 - points % 100} points to the next level")
+
+    st.divider()
+    if st.session_state.get("current_page", "🏠 Home") == "🏆 Leaderboard":
+        st.subheader("Weekly leaderboard")
+        st.caption("Points earned since the start of this week")
+        if st.session_state.leaderboard:
+            leaderboard_rows = [
+                {
+                "Rank": position,
+                "Player": row["display_name"],
+                "Points": row["weekly_points"],
+                "Quests": row["quests_completed"],
+                }
+                for position, row in enumerate(st.session_state.leaderboard, start=1)
+            ]
+            st.dataframe(
+                leaderboard_rows,
+                hide_index=True,
+                width="stretch",
+                alt="Weekly Life Quest leaderboard",
+            )
+        else:
+            st.info("Complete a quest to appear on the weekly leaderboard.")
+
+    if page != "🏠 Home":
+        return
+
+    st.subheader("📊 Your Statistics")
+    period = st.segmented_control(
+        "View statistics by",
+        ["Day", "Week", "Month"],
+        default="Week",
+    )
+
+    total_quests, streak, weekly_counts = calculate_statistics(
+        st.session_state.completion_dates
+    )
+
+    today = datetime.now(timezone.utc).date()
+
+    if period == "Day":
+        days_to_show = 1
+    elif period == "Week":
+        days_to_show = 7
+    else:
+        days_to_show = 30
+
+    activity_counts = []
+
+    for offset in range(days_to_show - 1, -1, -1):
+        selected_day = today - timedelta(days=offset)
+
+        count = sum(
+            1
+            for value in st.session_state.completion_dates
+            if datetime.fromisoformat(
+                value.replace("Z", "+00:00")
+            ).date() == selected_day
+        )
+
+        activity_counts.append(
+            {"Date": selected_day, "Quests": count}
+        )
+
+    period_quests = sum(row["Quests"] for row in activity_counts)
+    average_quests = period_quests / days_to_show
+
+    stat1, stat2, stat3 = st.columns(3)
+    stat1.metric("Total XP", points)
+    stat2.metric("Quests in period", period_quests)
+    stat3.metric("🔥 Daily streak", f"{streak} days")
+
+    st.metric("Average quests per day", f"{average_quests:.1f}")
+
+    st.write(f"**Quest activity — {period}**")
+
+    st.bar_chart(
+        activity_counts,
+        x="Date",
+        y="Quests",
+        x_label="Date",
+        y_label="Quests completed",
+    )
+    st.divider()
+    
+    
+    
 
 initialise_state()
 
