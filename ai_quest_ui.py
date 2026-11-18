@@ -124,7 +124,7 @@ def render_quest_styles():
     div[class*="st-key-quest_row_"] label {width:100%;min-width:0;cursor:pointer;}
     div[class*="st-key-quest_row_"] label>div {min-width:0;}
     div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] {min-width:0;}
-    div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {white-space:nowrap;
+    div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p white-space:normal;
       overflow:hidden;text-overflow:ellipsis;font-weight:550;line-height:1.6;}
     @media(prefers-reduced-motion:reduce) {
       div[class*="st-key-quest_row_"] {animation:none;transition:none;transform:none!important;}
@@ -185,7 +185,7 @@ def load_board(api, categories):
     rows,error=fetch_quests(api)
     if error:
         st.error('Your quests could not be loaded. Please refresh to reconnect.')
-        st.error(f"Debug: {error}")
+        
         return None
     rows=process_completions(api,rows)
     if rows is None:
@@ -320,9 +320,10 @@ def render_pillar(api, category):
     chart_labels["en"]
     )
 
-    chart_data = stats["activity"].rename(
-    columns={"Date": date_label, "Quests": quests_label}
-    )
+    chart_data = [
+    {date_label: row["Date"], quests_label: row["Quests"]}
+    for row in stats["activity"]
+]
 
     st.bar_chart(chart_data, x=date_label, y=quests_label, color="#245C43")
     st.subheader({

@@ -260,13 +260,28 @@ def render_squads(api, state):
 
 def render_competitions(api,state):
     uid=st.session_state.user['id']
-    st.subheader('A daily challenge. A weekly winner.')
-    st.write('One shared daily quest per friend. Add your result by 23:59 UTC.')
+    st.subheader(tx(
+    "A daily challenge. A weekly winner.",
+    "Um desafio diário. Um vencedor semanal.",
+    "Un défi quotidien. Un gagnant chaque semaine.",
+    "Eine tägliche Herausforderung. Ein Wochensieger."
+))
+    st.write(tx(
+    "One shared daily quest per friend. Add your result by 23:59 UTC.",
+    "Uma missão diária partilhada com cada amigo. Regista o teu resultado até às 23:59 UTC.",
+    "Une quête quotidienne partagée avec chaque ami. Enregistre ton résultat avant 23 h 59 UTC.",
+    "Eine gemeinsame tägliche Quest pro Freund. Trage dein Ergebnis bis 23:59 Uhr UTC ein."
+))
     with st.expander('Scoring & deadlines'):
         st.caption('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.')
         st.caption('Daily XP: winner 35, other submitting player 15, tied players 25 each. Weekly bonus: winner 50, participating players in a tied week 20 each. Missing entries earn no daily XP.')
         st.caption('Closed days and weeks settle when either player opens this page. Previous results stay in your history.')
-    with st.expander('Challenge a friend',expanded=not state['duels']):
+    with st.expander(tx(
+    "Challenge a friend",
+    "Desafiar um amigo",
+    "Défier un ami",
+    "Einen Freund herausfordern"
+), expanded=not state['duels']):
         friends={f['id']:f['name'] for f in state['friends']}
         if friends:
             with st.form('challenge_squadmates'):
@@ -285,36 +300,98 @@ def render_competitions(api,state):
         st.write('For a friend outside your squad, create an invitation and share its code yourself.')
         if st.button('Create a 1v1 invite code'):
             act(api,'create_friend_duel',{'friend_id':None},'Invitation created. Share its code below.')
-    with st.expander('Accept a 1v1 invite code'):
+    with st.expander(tx(
+    "Accept a 1v1 invite code",
+    "Aceitar um código de convite 1v1",
+    "Accepter un code d'invitation 1 contre 1",
+    "1-gegen-1-Einladungscode annehmen"
+)):
         with st.form('accept_duel'):
-            code=st.text_input('Competition invite code')
+            code=st.text_input(tx(
+    "Competition invite code",
+    "Código de convite da competição",
+    "Code d'invitation à la compétition",
+    "Einladungscode für den Wettbewerb"
+))
             join=st.form_submit_button('Accept challenge',type='primary')
         if join:
-            if not code.strip():st.error('Enter the invite code.')
-            else:act(api,'join_friend_duel',{'invite':code.strip().upper()},'Your competition is live.')
-    if st.button('Refresh results',key='social_refresh'):st.rerun()
-    if not state['duels']:st.info('Your competitions will appear here once you invite a friend.')
+            if not code.strip():
+                    st.error(tx(
+                        "Enter the invite code.",
+                        "Introduz o código de convite.",
+                        "Saisis le code d'invitation.",
+                        "Gib den Einladungscode ein."
+                ))
+            else:
+                act(api, 'join_friend_duel', {'invite': code.strip().upper()}, 'Your competition is live.')
+    if st.button(tx(
+    "Refresh results",
+    "Atualizar resultados",
+    "Actualiser les résultats",
+    "Ergebnisse aktualisieren"
+), key='social_refresh'):
+        st.rerun()
+    if not state['duels']:
+        st.info(tx(
+        "Your competitions will appear here once you invite a friend.",
+        "As tuas competições aparecerão aqui assim que convidares um amigo.",
+        "Tes compétitions apparaîtront ici dès que tu auras invité un ami.",
+        "Deine Wettbewerbe erscheinen hier, sobald du einen Freund eingeladen hast."
+    ))
     for pair in state['duels']:
         mine=pair['creator']==uid
         friend_id=pair['opponent'] if mine else pair['creator']
         friend_name=(pair.get('opponent_name') if mine else pair.get('creator_name')) or 'a friend'
         with st.container(border=True):
-            st.subheader('You vs '+friend_name)
+            st.subheader(tx(
+    "You vs ",
+    "Tu contra ",
+    "Toi contre ",
+    "Du gegen "
+) + friend_name)
             if pair['status']=='pending':
                 if mine:
-                    st.write('Waiting for your friend to accept.')
+                    st.write(tx(
+    "Waiting for your friend to accept.",
+    "À espera que o teu amigo aceite.",
+    "En attente de l'acceptation de ton ami.",
+    "Warte darauf, dass dein Freund annimmt."
+))
                     st.code(pair['code'],language=None)
                 else:
-                    st.write(pair['creator_name']+' invited you to a daily competition.')
-                    if st.button('Accept invitation',key='accept_'+pair['id']):
+                    st.write(pair['creator_name'] + tx(
+    " invited you to a daily competition.",
+    " convidou-te para uma competição diária.",
+    " t'a invité à une compétition quotidienne.",
+    " hat dich zu einem täglichen Wettbewerb eingeladen."
+))
+                    if st.button(tx(
+    "Accept invitation",
+    "Aceitar convite",
+    "Accepter l'invitation",
+    "Einladung annehmen"
+), key='accept_'+pair['id']):
                         act(api,'join_friend_duel',{'invite':pair['code']},'Challenge accepted.')
                 continue
             days=pair['days']
             current=next((d for d in days if d['day']==state['today']),None)
             week_days=[d for d in days if d['day']>=state['week_start'] and d['settled']]
             a,b=st.columns(2)
-            a.metric('Your wins this week',sum(d['winner']==uid for d in week_days))
-            b.metric(friend_name+'’s wins',sum(d['winner']==friend_id for d in week_days))
+            a.metric(tx(
+    "Your wins this week",
+    "As tuas vitórias esta semana",
+    "Tes victoires cette semaine",
+    "Deine Siege diese Woche"
+), sum(d['winner']==uid for d in week_days))
+            b.metric(
+    friend_name + tx(
+        "’s wins",
+        " — vitórias",
+        " — victoires",
+        " — Siege"
+    ),
+    sum(d['winner']==friend_id for d in week_days)
+)
             if current:
                 scores={s['user_id']:s['value'] for s in current['scores']}
                 st.markdown('**'+current['title']+'**')
@@ -322,7 +399,12 @@ def render_competitions(api,state):
                 st.write('Your result: **'+str(scores.get(uid,'not submitted'))+'** · '+friend_name+': **'+str(scores.get(friend_id,'not submitted'))+'**')
                 with st.form('score_'+current['id']):
                     value=st.number_input('Your total ('+current['unit']+')',min_value=0,max_value=current['max'],value=scores.get(uid,0),step=1)
-                    submitted=st.form_submit_button('Save my result',type='primary')
+                    submitted=st.form_submit_button(tx(
+    "Save my result",
+    "Guardar o meu resultado",
+    "Enregistrer mon résultat",
+    "Mein Ergebnis speichern"
+), type='primary')
                 if submitted:act(api,'record_duel_score',{'quest_id':current['id'],'result_value':int(value)},'Your result is saved. You can update it before the deadline.')
             if pair['weeks']:
                 st.markdown('**Weekly results**')
