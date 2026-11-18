@@ -19,6 +19,7 @@ from pro import is_pro, save_user_data
 
 PHOTO_SIZE = 80
 MAX_PHOTO_CHARS = 9000  # keeps the saved photo small enough for the login token
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # reject huge uploads before decoding them
 
 TEXT = {
     "en": {"photo": "Profile photo", "upload": "Upload a photo", "remove": "Remove photo", "ring": "Avatar style",
@@ -88,9 +89,11 @@ def _save(api, changes: dict, lang: str) -> None:
 def shrink_photo(raw: bytes) -> str | None:
     """Centre-crop to a square, resize to PHOTO_SIZE and return a small JPEG data URL."""
     from PIL import Image, ImageOps, UnidentifiedImageError
+    if not raw or len(raw) > MAX_UPLOAD_BYTES:
+        return None
     try:
         image = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError):
         return None
     image = ImageOps.fit(image, (PHOTO_SIZE, PHOTO_SIZE), Image.LANCZOS)
     for quality in (75, 60, 45):

@@ -540,16 +540,25 @@ def render_pillars_setting(lang: str) -> None:
 
 def render_city_setting(lang: str) -> None:
     labels = {
-        "en": ("Change city", "Your city", "City saved.", "We couldn't save your city. Please try again."),
-        "pt": ("Mudar cidade", "A tua cidade", "Cidade guardada.", "Não foi possível guardar a cidade. Tenta novamente."),
-        "fr": ("Changer de ville", "Ta ville", "Ville enregistrée.", "Impossible d'enregistrer ta ville. Réessaie."),
-        "de": ("Stadt ändern", "Deine Stadt", "Stadt gespeichert.", "Deine Stadt konnte nicht gespeichert werden. Bitte versuche es erneut."),
+        "en": ("Change city", "Your city", "City saved.", "We couldn't save your city. Please try again.",
+               "Start typing your city, for example Lisbon", "No matching city found. Check the spelling.",
+               "City search is unavailable right now. Please try again later."),
+        "pt": ("Mudar cidade", "A tua cidade", "Cidade guardada.", "Não foi possível guardar a cidade. Tenta novamente.",
+               "Começa a escrever a tua cidade, por exemplo Lisboa", "Nenhuma cidade encontrada. Verifica a ortografia.",
+               "A pesquisa de cidades não está disponível agora. Tenta mais tarde."),
+        "fr": ("Changer de ville", "Ta ville", "Ville enregistrée.", "Impossible d'enregistrer ta ville. Réessaie.",
+               "Commence à écrire ta ville, par exemple Lisbonne", "Aucune ville trouvée. Vérifie l'orthographe.",
+               "La recherche de villes est indisponible pour le moment. Réessaie plus tard."),
+        "de": ("Stadt ändern", "Deine Stadt", "Stadt gespeichert.", "Deine Stadt konnte nicht gespeichert werden. Bitte versuche es erneut.",
+               "Gib deine Stadt ein, zum Beispiel Lissabon", "Keine passende Stadt gefunden. Prüfe die Schreibweise.",
+               "Die Städtesuche ist gerade nicht verfügbar. Bitte versuche es später erneut."),
     }
-    title, field, saved, failed = labels.get(lang, labels["en"])
+    title, field, saved, failed, placeholder, none_found, unavailable = labels.get(lang, labels["en"])
     if st.session_state.get("city_toast"):
         st.toast(st.session_state.pop("city_toast"), icon="📍")
     with st.expander("📍 " + title):
-        place = city_picker("settings_city", "", label=field)
+        place = city_picker("settings_city", "", label=field, placeholder=placeholder,
+                            none_found=none_found, unavailable=unavailable)
         if place:
             if update_profile({"location": place["label"]}):
                 clear_city_picker("settings_city")  # otherwise the same city is saved again on every rerun

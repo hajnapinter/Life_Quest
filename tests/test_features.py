@@ -1,0 +1,213 @@
+"""City search, Pro rules, profile photo and safe HTML (places.py, pro.py, account.py, design.py)."""
+import base64
+from contextlib import nullcontext
+import io
+import json
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+from urllib.error import URLError
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import account
+import design
+import places
+import pro
+
+
+class State(dict):
+    """Minimal stand-in for st.session_state (dict + attribute access)."""
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+
+
+def fake_state(monkeypatch, *modules, metadata=None, location=""):
+    state = State(user={"id": "u1", "user_metadata": metadata or {}}, profile={"location": location},
+                  access_token="token")
+    for module in modules:
+        monkeypatch.setattr(module, "st", SimpleNamespace(session_state=state))
+    return state
+
+
+# ---------- city search (external API) ----------
+
+PHOTON = {"features": [
+    {"properties": {"name": "Lisbon", "country": "Portugal", "countrycode": "PT"}},
+    {"properties": {"name": "Lisbon", "country": "Portugal", "countrycode": "PT"}},           # duplicate
+    {"properties": {"name": "Lisburn", "state": "Northern Ireland", "country": "United Kingdom"}},
+    {"properties": {}},                                                                    # no name
+    "not a feature",
+]}
+
+
+@pytest.fixture(autouse=True)
+def clear_city_cache():
+    places._fetch_places.clear()
+    yield
+    places._fetch_places.clear()
+
+
+def test_place_label_skips_repeats_and_blanks():
+    assert places.place_label({"name": "Lisbon", "country": "Portugal"}) == "Lisbon, Portugal"
+    assert places.place_label({"name": "Monaco", "state": "Monaco", "country": "Monaco"}) == "Monaco"
+    assert places.place_label({}) == ""
+
+
+def test_photon_results_are_deduplicated_and_cleaned():
+    labels = [p["label"] for p in places.parse_places(PHOTON)]
+    assert labels == ["Lisbon, Portugal", "Lisburn, Northern Ireland, United Kingdom"]
+    assert places.parse_places(PHOTON, limit=1)[0]["country_code"] == "PT"
+
+
+def test_search_returns_cities(monkeypatch):
+    sent = {}
+    def fake_urlopen(request, timeout):
+        sent["url"] = request.full_url
+        return nullcontext(io.BytesIO(json.dumps(PHOTON).encode()))
+    monkeypatch.setattr(places, "urlopen", fake_urlopen)
+    assert places.search_places("Lisb")[0]["label"] == "Lisbon, Portugal"
+    assert "q=Lisb" in sent["url"] and "layer=city" in sent["url"]
+
+
+def test_too_short_query_does_not_call_the_api(monkeypatch):
+    monkeypatch.setattr(places, "urlopen", lambda *a, **k: pytest.fail("API should not be called"))
+    assert places.search_places(" L ") == []
+    assert places.search_places("") == []
+
+
+def test_long_queries_are_truncated(monkeypatch):
+    sent = {}
+    def fake_urlopen(request, timeout):
+        sent["url"] = request.full_url
+        return nullcontext(io.BytesIO(b'{"features": []}'))
+    monkeypatch.setattr(places, "urlopen", fake_urlopen)
+    places.search_places("a" * 500)
+    assert "a" * places.MAX_QUERY in sent["url"] and "a" * (places.MAX_QUERY + 1) not in sent["url"]
+
+
+@pytest.mark.parametrize("response", [URLError("offline"), TimeoutError(), b"<html>not json</html>", b'["wrong shape"]'])
+def test_unavailable_city_search_returns_none_not_a_crash(monkeypatch, response):
+    def fake_urlopen(request, timeout):
+        if isinstance(response, Exception):
+            raise response
+        return nullcontext(io.BytesIO(response))
+    monkeypatch.setattr(places, "urlopen", fake_urlopen)
+    assert places.search_places("Lisbon") is None
+
+
+def test_failed_search_is_not_cached(monkeypatch):
+    monkeypatch.setattr(places, "urlopen", lambda *a, **k: (_ for _ in ()).throw(URLError("down")))
+    assert places.search_places("Porto") is None
+    monkeypatch.setattr(places, "urlopen", lambda *a, **k: nullcontext(io.BytesIO(json.dumps(PHOTON).encode())))
+    assert places.search_places("Porto")  # service is back: works without waiting for the cache to expire
+
+
+# ---------- Pro rules ----------
+
+def test_free_accounts_get_three_pillars(monkeypatch):
+    fake_state(monkeypatch, pro)
+    assert pro.is_pro() is False
+    assert pro.pillar_limit() == 3
+
+
+def test_free_accounts_keep_pillars_they_already_had(monkeypatch):
+    fake_state(monkeypatch, pro)
+    assert pro.pillar_limit(5) == 5
+
+
+def test_pro_accounts_get_all_seven_pillars(monkeypatch):
+    fake_state(monkeypatch, pro, metadata={"lifequest_pro": {"active": True}})
+    assert pro.is_pro() is True
+    assert pro.pillar_limit() == 7
+
+
+def test_cancelled_pro_is_free_again(monkeypatch):
+    fake_state(monkeypatch, pro, metadata={"lifequest_pro": {"active": False, "plan": "yearly"}})
+    assert pro.is_pro() is False
+
+
+@pytest.mark.parametrize("location,country", [("Lisbon, Portugal", "Portugal"),
+                                              ("Lisburn, Northern Ireland, United Kingdom", "United Kingdom"),
+                                              ("", ""), (None, "")])
+def test_country_comes_from_the_saved_city(location, country):
+    assert pro.country_of(location) == country
+
+
+def test_saving_metadata_uses_the_server_answer(monkeypatch):
+    state = fake_state(monkeypatch, pro)
+    api = lambda method, path, payload, token: ({"id": "u1", "user_metadata": payload["data"]}, None)
+    assert pro.save_user_data(api, {"lifequest_pro": {"active": True}}) is None
+    assert state.user["user_metadata"]["lifequest_pro"]["active"] is True
+
+
+def test_saving_metadata_reports_errors_and_changes_nothing(monkeypatch):
+    state = fake_state(monkeypatch, pro)
+    api = lambda *args: (None, "Network error")
+    assert pro.save_user_data(api, {"lifequest_pro": {"active": True}}) == "Network error"
+    assert "lifequest_pro" not in state.user["user_metadata"]
+
+
+# ---------- profile photo ----------
+
+def image_bytes(fmt="PNG", size=(300, 200)):
+    from PIL import Image
+    buffer = io.BytesIO()
+    Image.new("RGB", size, (255, 138, 76)).save(buffer, fmt)
+    return buffer.getvalue()
+
+
+def test_photo_is_cropped_to_a_small_square_jpeg():
+    from PIL import Image
+    url = account.shrink_photo(image_bytes())
+    assert url.startswith("data:image/jpeg;base64,")
+    assert len(url) <= account.MAX_PHOTO_CHARS
+    decoded = Image.open(io.BytesIO(base64.b64decode(url.split(",", 1)[1])))
+    assert decoded.size == (account.PHOTO_SIZE, account.PHOTO_SIZE)
+
+
+@pytest.mark.parametrize("raw", [b"", b"definitely not an image", b"%PDF-1.7 fake pdf"])
+def test_non_images_are_rejected(raw):
+    assert account.shrink_photo(raw) is None
+
+
+def test_oversized_uploads_are_rejected_before_decoding():
+    assert account.shrink_photo(b"0" * (account.MAX_UPLOAD_BYTES + 1)) is None
+
+
+def test_only_image_data_urls_count_as_a_photo(monkeypatch):
+    fake_state(monkeypatch, account, metadata={"lifequest_profile": {"photo": "javascript:alert(1)"}})
+    assert account.photo() is None
+
+
+def test_avatar_ring_is_a_pro_perk(monkeypatch):
+    fake_state(monkeypatch, account, metadata={"lifequest_profile": {"ring": "lilac"}})
+    monkeypatch.setattr(account, "is_pro", lambda: False)
+    assert account.ring() == "peach"
+    monkeypatch.setattr(account, "is_pro", lambda: True)
+    assert account.ring() == "lilac"
+
+
+def test_unknown_ring_falls_back_to_default(monkeypatch):
+    fake_state(monkeypatch, account, metadata={"lifequest_profile": {"ring": "<script>"}})
+    monkeypatch.setattr(account, "is_pro", lambda: True)
+    assert account.ring() == "peach"
+
+
+# ---------- user text is escaped before it reaches HTML ----------
+
+def test_avatar_escapes_names_and_ignores_unsafe_photos():
+    html_out = design.avatar_html("<script>alert(1)</script>", photo="javascript:alert(1)")
+    assert "<script>" not in html_out and "javascript:" not in html_out
+    assert "&lt;" in html_out
+
+
+def test_avatar_escapes_quotes_in_photo_urls():
+    html_out = design.avatar_html("Ana", photo='data:image/png;base64,AAA" onerror="alert(1)')
+    assert 'onerror="alert' not in html_out
+
+
+def test_initials():
+    assert design.initials("Ana Luiza Costa") == "AL"
+    assert design.initials("") == "?"

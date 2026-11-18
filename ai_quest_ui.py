@@ -183,7 +183,6 @@ def load_board(api, categories):
     rows,error=fetch_quests(api)
     if error:
         st.error('Your quests could not be loaded. Please refresh to reconnect.')
-        st.error(f"Debug: {error}")
         return None
     rows=process_completions(api,rows)
     if rows is None:

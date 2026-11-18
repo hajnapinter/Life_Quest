@@ -1,39 +1,60 @@
 # Life Quest
 
-Life Quest turns personal development into a social game. Users choose life
-areas, complete challenges, earn points, compete on a weekly leaderboard, and
-work together in squads.
+Life Quest turns personal development into a friendly game. You choose the life
+areas ("pillars") you want to grow in, get small practical quests that adapt to
+your pace, earn XP, and progress together with friends in squads.
 
-## Team members
-
-Replace the placeholders below before submitting the project:
-
-Catarina Pedro | 71361
+[![Tests](https://github.com/hajnapinter/Life_Quest/actions/workflows/tests.yml/badge.svg)](https://github.com/hajnapinter/Life_Quest/actions/workflows/tests.yml)
 
 ## Deployed application
 
-Add the public deployed URL here before submission:
+**TODO: paste the Streamlit Community Cloud URL here**
 
-`TODO: deployed URL`
+## Team
+
+| Name | Student number |
+|---|---|
+| Catarina Pedro | 71361 |
+| TODO | TODO |
+| TODO | TODO |
+| TODO | TODO |
+
+## Run it locally
+
+```bash
+uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502   # app at http://127.0.0.1:8502
+uv run pytest                                                                # Python tests
+node --test tests/oauth.test.cjs                                             # Google sign-in tests
+```
+
+The app needs `.streamlit/secrets.toml` with the Supabase URL and anon key (see *Local setup* below).
+Without an AI key it still works: quests then come from the built-in habit library.
 
 ## Main features
 
-- Email account creation and login through Supabase Auth.
-- Step-by-step onboarding with nickname, selected pillars and starting levels.
-- Five renewable, one-line checkbox quests per selected pillar, with persistent XP.
-- Free-only Requesty AI variations with a practical habit-library fallback.
-- Per-pillar activity charts, completion history and growth targets.
-- Secure challenge completion with persistent points.
-- Weekly leaderboard based on points earned during the current week.
-- Squad creation and invite-code based joining.
-- Shared weekly squad quests with two-participant confirmation.
-- Accepted friend invitations, shared daily 1v1 challenges and weekly results.
+- Sign-up and login with email (validated) or Google (PKCE), through Supabase Auth.
+- Onboarding: nickname, pillars (up to 3, all 7 with Pro), starting level per pillar, how many quests to show, city search.
+- Five adaptive quests kept ready per pillar; harder after a success, easier after "too hard"; shown 1–5 at a time.
+- Optional free AI wording of quests, strictly validated, with a habit-library fallback.
+- Pillar pages with XP, weekly change, streak, a 14-day activity grid and next steps.
+- Squads with invite codes, shared weekly quests needing two confirmations, and a weekly squad ranking.
+- Daily 1v1 competitions with friends and weekly winners.
+- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo, phone/laptop notifications, email reminders.
+- Life Quest Pro (demo subscription): all pillars, avatar styles, country-personalised quests (placeholder), and a list of features that would need paid APIs.
+- English, Portuguese, French and German; works on phone and desktop.
+
+## How it is built
+
+See **[docs/architecture.md](docs/architecture.md)**: where the data is stored, security, what the tests
+cover, what happens when an external service is down, known limits, and a demo checklist.
+The visual design rules are in [docs/design.md](docs/design.md).
 
 ## Tech stack
 
-- Streamlit for the user interface.
-- Supabase Auth and PostgreSQL for accounts and persistent data.
-- Supabase Row Level Security and database functions for access control.
+- Streamlit (Python) for the interface; Supabase Auth and PostgreSQL for accounts and data.
+- Row Level Security and database functions for access control.
+- External APIs: Requesty (optional, free models only) and Photon / OpenStreetMap (city search).
+- Dependencies pinned in `pyproject.toml` / `uv.lock` / `requirements.txt`; tests and a dependency audit run on every push.
 
 ## Local setup
 
@@ -106,11 +127,18 @@ computer. After saving the deployment secrets, redeploy or restart the app.
 ## Project structure
 
 ```text
-app.py                         Streamlit application
-supabase/schema.sql            Database tables, policies, and functions
-supabase/*-function.sql        Incremental database functions
-docs/product-rules.md          Product rules and acceptance examples
-docs/supabase-setup.md          Supabase setup and security notes
+app.py                  Entry point: login, dashboard, navigation, Settings
+onboarding.py           First-run questions
+ai_quest_ui.py          Home and pillar pages (quests, statistics)
+quest_plan.py           Quest tracks, progression and statistics (pure logic)
+ai_quests.py            Optional AI wording with strict validation
+social_play.py          Squads, squad ranking, 1v1 competitions
+pro.py / account.py     Pro demo, profile photo, avatar, notifications
+places.py               City search (Photon / OpenStreetMap)
+design.py               All styling and reusable UI pieces
+supabase/*.sql          Tables, security rules and database functions
+tests/                  Automated tests
+docs/                   Architecture, design rules, setup guides
 ```
 
 ## Confirmation email and Google sign-in
