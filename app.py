@@ -128,6 +128,13 @@ def email_cooldown(email: str, reserve: bool = False) -> int:
 
 
 def app_redirect_url() -> str | None:
+    # The deployment sets [app] url = "https://…" in its Secrets; local runs use auth_config.json.
+    try:
+        deployed = st.secrets.get("app", {}).get("url")
+    except (FileNotFoundError, AttributeError, KeyError):
+        deployed = None
+    if isinstance(deployed, str) and valid_app_url(deployed):
+        return deployed
     try:
         value = json.loads((Path(__file__).parent / "auth_config.json").read_text())["app_url"]
         return value if isinstance(value, str) and valid_app_url(value) else None

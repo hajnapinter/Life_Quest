@@ -8,7 +8,7 @@ your pace, earn XP, and progress together with friends in squads.
 
 ## Deployed application
 
-**TODO: paste the Streamlit Community Cloud URL here**
+**TODO: paste the Streamlit Community Cloud URL here** (how to deploy: [docs/deploy.md](docs/deploy.md))
 
 ## Team
 
