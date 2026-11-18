@@ -124,6 +124,5 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 4. Squad: create a squad, show the invite code and weekly ranking.
 5. Recap: show the week's numbers and download the CSV.
 6. Settings: change quests per pillar, search a city, upload a photo, subscribe to Pro (yearly), pick an avatar ring.
-7. Switch the language to Portuguese and show that everything follows.
-8. Show invalid input: wrong email on login, short password on sign-up.
-9. Show the green "Tests" check on GitHub.
+7. Show invalid input: wrong email on login, short password on sign-up.
+8. Show the green "Tests" check on GitHub.
