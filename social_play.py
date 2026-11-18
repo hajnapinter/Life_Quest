@@ -1,6 +1,7 @@
 """Shared squad missions and pair-specific daily competitions."""
 import streamlit as st
 from ai_quest_ui import render_quest_styles
+from design import hero, member_chips, squad_ranking
 def tx(en, pt, fr, de):
     language = st.session_state.get("language", "en")
     translations = {
@@ -33,19 +34,24 @@ def queue_squad_confirmation(quest_id):
 def render_social(api):
     render_quest_styles()
 
+    st.markdown('<div class="lq-eyebrow">' + tx("Squad", "Equipa", "Équipe", "Team") + '</div>', unsafe_allow_html=True)
     st.title(tx(
         "Better together",
         "Melhores juntos",
         "Ensemble, c'est mieux",
         "Gemeinsam besser"
     ))
-
-    st.write(tx(
-        "Share a real experience, or give a friend a friendly challenge.",
-        "Partilha uma experiência real ou desafia um amigo de forma amigável.",
-        "Partage une vraie expérience ou lance un défi amical à un ami.",
-        "Teile ein echtes Erlebnis oder fordere einen Freund zu einer freundlichen Herausforderung heraus."
-    ))
+    hero(
+        tx("Shared quests", "Missões partilhadas", "Quêtes communes", "Gemeinsame Quests"),
+        tx("Grow with your friends", "Cresce com os teus amigos", "Progresse avec tes amis", "Wachse mit deinen Freunden"),
+        tx(
+            "Share a real experience, or give a friend a friendly challenge.",
+            "Partilha uma experiência real ou desafia um amigo de forma amigável.",
+            "Partage une vraie expérience ou lance un défi amical à un ami.",
+            "Teile ein echtes Erlebnis oder fordere einen Freund zu einer freundlichen Herausforderung heraus."
+        ),
+        variant="lilac",
+    )
 
     state, error = rpc(api, 'get_social_state')
 
@@ -113,149 +119,172 @@ def render_social(api):
     with competition:
         render_competitions(api, state)
 
+def render_squad_ranking(api, squad):
+    """This week's XP for the members of one squad (from the weekly leaderboard, matched by name)."""
+    board, error = rpc(api, 'get_weekly_leaderboard')
+    if error or not isinstance(board, list):
+        st.caption(tx("This week's ranking could not be loaded.", "Não foi possível carregar a classificação desta semana.",
+                      "Impossible de charger le classement de la semaine.", "Die Rangliste dieser Woche konnte nicht geladen werden."))
+        return
+    scores = {r.get('display_name'): r for r in board}
+    rows = [{'name': m['name'] or '?',
+             'points': (scores.get(m['name']) or {}).get('weekly_points') or 0,
+             'quests': (scores.get(m['name']) or {}).get('quests_completed') or 0}
+            for m in squad['members']]
+    squad_ranking(
+        rows, st.session_state.profile.get('display_name', ''),
+        tx("This week in your squad", "Esta semana na tua equipa", "Cette semaine dans ton équipe", "Diese Woche in deinem Team"),
+        quests_label=tx("quests", "missões", "quêtes", "Quests"),
+    )
+
+
 def render_squads(api, state):
     squads = state['squads']
 
-    if squads:
-        options = {str(s['id']): s for s in squads}
-        chosen = st.selectbox(
-            tx("Your squad", "A tua equipa", "Ton équipe", "Dein Team"),
-            list(options),
-            format_func=lambda k: options[k]['name']
-        )
-        squad = options[chosen]
+    left, right = st.columns([3, 2], gap="large")
+    with left:
+            if squads:
+                options = {str(s['id']): s for s in squads}
+                chosen = st.selectbox(
+                    tx("Your squad", "A tua equipa", "Ton équipe", "Dein Team"),
+                    list(options),
+                    format_func=lambda k: options[k]['name']
+                )
+                squad = options[chosen]
 
-        st.subheader(squad['name'])
-        st.caption(' · '.join(m['name'] for m in squad['members']))
+                st.subheader(squad['name'])
+                member_chips([m['name'] for m in squad['members']])
+                render_squad_ranking(api, squad)
 
-        with st.expander(tx("Invite a friend", "Convidar um amigo", "Inviter un ami", "Freund einladen")):
-            st.write(tx(
-                "Ask your friend to open Squad quests and enter this code:",
-                "Pede ao teu amigo para abrir as missões de equipa e introduzir este código:",
-                "Demande à ton ami d'ouvrir les quêtes d'équipe et de saisir ce code :",
-                "Bitte deinen Freund, die Team-Quests zu öffnen und diesen Code einzugeben:"
-            ))
-            st.code(squad['invite_code'], language=None)
+                with st.expander(tx("Invite a friend", "Convidar um amigo", "Inviter un ami", "Freund einladen")):
+                    st.write(tx(
+                        "Ask your friend to open Squad quests and enter this code:",
+                        "Pede ao teu amigo para abrir as missões de equipa e introduzir este código:",
+                        "Demande à ton ami d'ouvrir les quêtes d'équipe et de saisir ce code :",
+                        "Bitte deinen Freund, die Team-Quests zu öffnen und diesen Code einzugeben:"
+                    ))
+                    st.code(squad['invite_code'], language=None)
 
-        st.caption(tx(
-            "Three shared quests each week. Do them together, then each participant confirms. At least two confirmations unlock 30 XP per participant.",
-            "Três missões partilhadas por semana. Façam-nas juntos e cada participante confirma. Pelo menos duas confirmações desbloqueiam 30 XP por participante.",
-            "Trois quêtes communes par semaine. Réalisez-les ensemble, puis chaque participant confirme. Au moins deux confirmations débloquent 30 XP par participant.",
-            "Drei gemeinsame Quests pro Woche. Erledigt sie zusammen und bestätigt sie jeweils. Mindestens zwei Bestätigungen schalten 30 XP pro Teilnehmer frei."
-        ))
+                st.caption(tx(
+                    "Three shared quests each week. Do them together, then each participant confirms. At least two confirmations unlock 30 XP per participant.",
+                    "Três missões partilhadas por semana. Façam-nas juntos e cada participante confirma. Pelo menos duas confirmações desbloqueiam 30 XP por participante.",
+                    "Trois quêtes communes par semaine. Réalisez-les ensemble, puis chaque participant confirme. Au moins deux confirmations débloquent 30 XP par participant.",
+                    "Drei gemeinsame Quests pro Woche. Erledigt sie zusammen und bestätigt sie jeweils. Mindestens zwei Bestätigungen schalten 30 XP pro Teilnehmer frei."
+                ))
 
-        confirmed_total = sum(
-            st.session_state.user['id'] in q['confirmed']
-            for q in squad['quests']
-        )
-
-        st.caption(tx(
-            f"Your participation: {confirmed_total}/{len(squad['quests'])} confirmed",
-            f"A tua participação: {confirmed_total}/{len(squad['quests'])} confirmadas",
-            f"Ta participation : {confirmed_total}/{len(squad['quests'])} confirmées",
-            f"Deine Teilnahme: {confirmed_total}/{len(squad['quests'])} bestätigt"
-        ))
-
-        for quest in squad['quests']:
-            mine = st.session_state.user['id'] in quest['confirmed']
-            key = 'team_check_' + quest['id']
-            st.session_state[key] = mine
-
-            with st.container(key='quest_row_team_' + quest['id']):
-                st.checkbox(
-                    quest['title'],
-                    key=key,
-                    disabled=mine or len(squad['members']) < 2,
-                    on_change=queue_squad_confirmation,
-                    args=(quest['id'],)
+                confirmed_total = sum(
+                    st.session_state.user['id'] in q['confirmed']
+                    for q in squad['quests']
                 )
 
-        if len(squad['members']) < 2:
-            st.info(tx(
-                "Invite a friend to start checking off shared quests together.",
-                "Convida um amigo para começarem a completar missões juntos.",
-                "Invite un ami pour commencer à réaliser des quêtes ensemble.",
-                "Lade einen Freund ein, damit ihr gemeinsam Quests abschließen könnt."
-            ))
-
-    else:
-        st.subheader(tx(
-            "Turn a plan with friends into a shared quest",
-            "Transforma um plano com amigos numa missão partilhada",
-            "Transforme un projet entre amis en quête commune",
-            "Mach aus einem Plan mit Freunden eine gemeinsame Quest"
-        ))
-
-        st.write(tx(
-            "Start a squad, share its code and choose an experience to do together. Everyone needs their own Life Quest account.",
-            "Cria uma equipa, partilha o código e escolhe uma experiência para fazerem juntos. Todos precisam da sua própria conta Life Quest.",
-            "Crée une équipe, partage son code et choisissez une expérience à faire ensemble. Chaque personne doit avoir son propre compte Life Quest.",
-            "Gründe ein Team, teile den Code und wähle ein gemeinsames Erlebnis. Jeder benötigt ein eigenes Life-Quest-Konto."
-        ))
-
-    with st.expander(
-        tx("Start another squad", "Criar outra equipa", "Créer une autre équipe", "Weiteres Team erstellen")
-        if squads else
-        tx("Start your squad", "Criar a tua equipa", "Créer ton équipe", "Dein Team erstellen"),
-        expanded=not squads
-    ):
-        with st.form('social_create_squad'):
-            name = st.text_input(
-                tx("Squad name", "Nome da equipa", "Nom de l'équipe", "Teamname"),
-                max_chars=50
-            )
-            submit = st.form_submit_button(
-                tx("Start a squad", "Criar uma equipa", "Créer une équipe", "Team erstellen"),
-                type='primary'
-            )
-
-        if submit:
-            if len(name.strip()) < 2:
-                st.error(tx(
-                    "Choose a name with at least two characters.",
-                    "Escolhe um nome com pelo menos dois caracteres.",
-                    "Choisis un nom d'au moins deux caractères.",
-                    "Wähle einen Namen mit mindestens zwei Zeichen."
+                st.caption(tx(
+                    f"Your participation: {confirmed_total}/{len(squad['quests'])} confirmed",
+                    f"A tua participação: {confirmed_total}/{len(squad['quests'])} confirmadas",
+                    f"Ta participation : {confirmed_total}/{len(squad['quests'])} confirmées",
+                    f"Deine Teilnahme: {confirmed_total}/{len(squad['quests'])} bestätigt"
                 ))
+
+                for quest in squad['quests']:
+                    mine = st.session_state.user['id'] in quest['confirmed']
+                    key = 'team_check_' + quest['id']
+                    st.session_state[key] = mine
+
+                    with st.container(key='quest_row_team_' + quest['id']):
+                        st.checkbox(
+                            quest['title'],
+                            key=key,
+                            disabled=mine or len(squad['members']) < 2,
+                            on_change=queue_squad_confirmation,
+                            args=(quest['id'],)
+                        )
+
+                if len(squad['members']) < 2:
+                    st.info(tx(
+                        "Invite a friend to start checking off shared quests together.",
+                        "Convida um amigo para começarem a completar missões juntos.",
+                        "Invite un ami pour commencer à réaliser des quêtes ensemble.",
+                        "Lade einen Freund ein, damit ihr gemeinsam Quests abschließen könnt."
+                    ))
+
             else:
-                act(api, 'create_squad', {'squad_name_input': name.strip()}, tx(
-                    "Your squad is ready. Share its invite code with your friends.",
-                    "A tua equipa está pronta. Partilha o código de convite com os teus amigos.",
-                    "Ton équipe est prête. Partage le code d'invitation avec tes amis.",
-                    "Dein Team ist bereit. Teile den Einladungscode mit deinen Freunden."
+                st.subheader(tx(
+                    "Turn a plan with friends into a shared quest",
+                    "Transforma um plano com amigos numa missão partilhada",
+                    "Transforme un projet entre amis en quête commune",
+                    "Mach aus einem Plan mit Freunden eine gemeinsame Quest"
                 ))
 
-    with st.expander(tx(
-        "I have a squad invite code",
-        "Tenho um código de convite",
-        "J'ai un code d'invitation",
-        "Ich habe einen Einladungscode"
-    )):
-        with st.form('social_join_squad'):
-            code = st.text_input(tx(
-                "Squad invite code", "Código de convite da equipa",
-                "Code d'invitation de l'équipe", "Team-Einladungscode"
-            ))
-            join = st.form_submit_button(tx(
-                "Join my friends", "Juntar-me aos meus amigos",
-                "Rejoindre mes amis", "Meinen Freunden beitreten"
-            ))
+                st.write(tx(
+                    "Start a squad, share its code and choose an experience to do together. Everyone needs their own Life Quest account.",
+                    "Cria uma equipa, partilha o código e escolhe uma experiência para fazerem juntos. Todos precisam da sua própria conta Life Quest.",
+                    "Crée une équipe, partage son code et choisissez une expérience à faire ensemble. Chaque personne doit avoir son propre compte Life Quest.",
+                    "Gründe ein Team, teile den Code und wähle ein gemeinsames Erlebnis. Jeder benötigt ein eigenes Life-Quest-Konto."
+                ))
 
-        if join:
-            if not code.strip():
-                st.error(tx(
-                    "Enter the invite code your friend shared.",
-                    "Introduz o código de convite que o teu amigo partilhou.",
-                    "Saisis le code d'invitation partagé par ton ami.",
-                    "Gib den Einladungscode ein, den dein Freund geteilt hat."
-                ))
-            else:
-                act(api, 'join_squad', {'invite_code_input': code.strip().upper()}, tx(
-                    "You joined the squad.",
-                    "Entraste na equipa.",
-                    "Tu as rejoint l'équipe.",
-                    "Du bist dem Team beigetreten."
-                ))
+    with right:
+            with st.expander(
+                tx("Start another squad", "Criar outra equipa", "Créer une autre équipe", "Weiteres Team erstellen")
+                if squads else
+                tx("Start your squad", "Criar a tua equipa", "Créer ton équipe", "Dein Team erstellen"),
+                expanded=not squads
+            ):
+                with st.form('social_create_squad'):
+                    name = st.text_input(
+                        tx("Squad name", "Nome da equipa", "Nom de l'équipe", "Teamname"),
+                        max_chars=50
+                    )
+                    submit = st.form_submit_button(
+                        tx("Start a squad", "Criar uma equipa", "Créer une équipe", "Team erstellen"),
+                        type='primary'
+                    )
+
+                if submit:
+                    if len(name.strip()) < 2:
+                        st.error(tx(
+                            "Choose a name with at least two characters.",
+                            "Escolhe um nome com pelo menos dois caracteres.",
+                            "Choisis un nom d'au moins deux caractères.",
+                            "Wähle einen Namen mit mindestens zwei Zeichen."
+                        ))
+                    else:
+                        act(api, 'create_squad', {'squad_name_input': name.strip()}, tx(
+                            "Your squad is ready. Share its invite code with your friends.",
+                            "A tua equipa está pronta. Partilha o código de convite com os teus amigos.",
+                            "Ton équipe est prête. Partage le code d'invitation avec tes amis.",
+                            "Dein Team ist bereit. Teile den Einladungscode mit deinen Freunden."
+                        ))
+
+            with st.expander(tx(
+                "I have a squad invite code",
+                "Tenho um código de convite",
+                "J'ai un code d'invitation",
+                "Ich habe einen Einladungscode"
+            )):
+                with st.form('social_join_squad'):
+                    code = st.text_input(tx(
+                        "Squad invite code", "Código de convite da equipa",
+                        "Code d'invitation de l'équipe", "Team-Einladungscode"
+                    ))
+                    join = st.form_submit_button(tx(
+                        "Join my friends", "Juntar-me aos meus amigos",
+                        "Rejoindre mes amis", "Meinen Freunden beitreten"
+                    ))
+
+                if join:
+                    if not code.strip():
+                        st.error(tx(
+                            "Enter the invite code your friend shared.",
+                            "Introduz o código de convite que o teu amigo partilhou.",
+                            "Saisis le code d'invitation partagé par ton ami.",
+                            "Gib den Einladungscode ein, den dein Freund geteilt hat."
+                        ))
+                    else:
+                        act(api, 'join_squad', {'invite_code_input': code.strip().upper()}, tx(
+                            "You joined the squad.",
+                            "Entraste na equipa.",
+                            "Tu as rejoint l'équipe.",
+                            "Du bist dem Team beigetreten."
+                        ))
 
 
 def render_competitions(api,state):
@@ -298,7 +327,7 @@ def render_competitions(api,state):
         mine=pair['creator']==uid
         friend_id=pair['opponent'] if mine else pair['creator']
         friend_name=(pair.get('opponent_name') if mine else pair.get('creator_name')) or 'a friend'
-        with st.container(border=True):
+        with st.container(key='card_duel_'+str(pair['id'])):
             st.subheader('You vs '+friend_name)
             if pair['status']=='pending':
                 if mine:
