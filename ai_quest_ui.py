@@ -57,7 +57,8 @@ def build_batch(category, slots, rows, pending_id=None, allow_ai=True):
         attempts[identity]=now
     if key and can_call and allow_ai:
         try:
-            plans=generate_slot_quests(key,plans,history)
+            language = st.session_state.get("language", "en")
+            plans = generate_slot_quests(key, plans, history, language)
         except QuestGenerationError:
             st.session_state.quest_library_used=True
     elif allow_ai:
@@ -169,8 +170,8 @@ def process_completions(api, rows):
         rows=refreshed
     return rows
 
-
 def render_quest_cards(api, rows, category):
+    language = st.session_state.get("language", "en")
     active=sorted([q for q in rows if q['category']==category and q['status']=='active'],key=lambda q:q['slot'])
     for quest in active:
         title=clean_title(quest['title'],quest.get('target'))
@@ -184,6 +185,7 @@ def load_board(api, categories):
     rows,error=fetch_quests(api)
     if error:
         st.error('Your quests could not be loaded. Please refresh to reconnect.')
+        st.error(f"Debug: {error}")
         return None
     rows=process_completions(api,rows)
     if rows is None:
@@ -208,24 +210,67 @@ def load_board(api, categories):
 def render_home(api):
     render_quest_styles()
     name=st.session_state.profile.get('display_name','there')
-    st.caption('LIFE QUEST · A LITTLE BETTER, EVERY DAY')
-    st.title(f'Hi, {name} 👋')
-    st.write('Five small opportunities in each of your pillars. Pick what fits today — good luck!')
+    st.caption({
+        "en": "LIFE QUEST · A LITTLE BETTER, EVERY DAY",
+        "pt": "LIFE QUEST · UM POUCO MELHOR A CADA DIA",
+        "fr": "LIFE QUEST · UN PEU MIEUX CHAQUE JOUR",
+        "de": "LIFE QUEST · JEDEN TAG EIN BISSCHEN BESSER",
+    }.get(st.session_state.get("language", "en")))
+    language = st.session_state.get("language", "en")
+    greeting = {
+        "en": "Hi",
+        "pt": "Olá",
+        "fr": "Salut",
+        "de": "Hallo",
+    }.get(language, "Hi")
+    st.title(f'{greeting}, {name} 👋')
+    st.write({
+        "en": "Five small opportunities in each of your pillars. Pick what fits today — good luck!",
+        "pt": "Cinco pequenas oportunidades em cada uma das tuas áreas. Escolhe o que combina contigo hoje — boa sorte!",
+        "fr": "Cinq petites opportunités dans chacun de tes domaines. Choisis ce qui te convient aujourd'hui — bonne chance !",
+        "de": "Fünf kleine Möglichkeiten in jedem deiner Lebensbereiche. Wähle, was heute zu dir passt — viel Erfolg!",
+    }.get(language, "Five small opportunities in each of your pillars. Pick what fits today — good luck!"))
     categories=[c for c in st.session_state.profile.get('selected_categories',[]) if c in PILLARS]
     rows=load_board(api,categories)
     if rows is None:
         return
     st.caption(f'🌱 {st.session_state.profile.get("points",0)} XP')
     for category in categories:
-        st.subheader(f'{PILLARS[category][0]} {category}')
-        st.caption('5 independent quests · a fresh one appears whenever you finish')
+            
+        category_names = {
+            "Fitness": {"pt": "Exercício", "fr": "Sport", "de": "Fitness"},
+            "Health": {"pt": "Saúde", "fr": "Santé", "de": "Gesundheit"},
+            "Languages": {"pt": "Idiomas", "fr": "Langues", "de": "Sprachen"},
+            "Personal Growth": {"pt": "Desenvolvimento Pessoal", "fr": "Développement personnel", "de": "Persönliche Entwicklung"},
+            "Social": {"pt": "Vida Social", "fr": "Vie sociale", "de": "Soziales"},
+            "Adventure": {"pt": "Aventura", "fr": "Aventure", "de": "Abenteuer"},
+            "Finance": {"pt": "Finanças", "fr": "Finances", "de": "Finanzen"},
+        }
+        translated_category = category_names.get(category, {}).get(language, category)
+        st.subheader(f'{PILLARS[category][0]} {translated_category}')
+        st.caption({
+            "en": "5 independent quests · a fresh one appears whenever you finish",
+            "pt": "5 missões independentes · aparece uma nova sempre que concluis uma",
+            "fr": "5 quêtes indépendantes · une nouvelle apparaît à chaque quête terminée",
+            "de": "5 unabhängige Quests · nach jedem Abschluss erscheint eine neue",
+        }.get(language, "5 independent quests · a fresh one appears whenever you finish"))
         render_quest_cards(api,rows,category)
 
 
 def render_pillar(api, category):
     render_quest_styles()
-    st.caption('YOUR PILLAR · YOUR PROGRESS')
-    st.title(f'{PILLARS[category][0]} {category}')
+    st.caption({
+    "en": "YOUR PILLAR · YOUR PROGRESS",
+    "pt": "A TUA ÁREA · O TEU PROGRESSO",
+    "fr": "TON DOMAINE · TES PROGRÈS",
+    "de": "DEIN BEREICH · DEIN FORTSCHRITT",
+}.get(st.session_state.get("language", "en"), "YOUR PILLAR · YOUR PROGRESS"))
+    st.title(f'{PILLARS[category][0]} ' + {
+    "en": category,
+    "pt": {"Finance": "Finanças", "Fitness": "Exercício", "Health": "Saúde", "Languages": "Idiomas", "Personal Growth": "Desenvolvimento Pessoal", "Social": "Vida Social", "Adventure": "Aventura"}.get(category, category),
+    "fr": {"Finance": "Finances", "Fitness": "Sport", "Health": "Santé", "Languages": "Langues", "Personal Growth": "Développement personnel", "Social": "Vie sociale", "Adventure": "Aventure"}.get(category, category),
+    "de": {"Finance": "Finanzen", "Fitness": "Fitness", "Health": "Gesundheit", "Languages": "Sprachen", "Personal Growth": "Persönliche Entwicklung", "Social": "Soziales", "Adventure": "Abenteuer"}.get(category, category),
+}.get(st.session_state.get("language", "en"), category))
     rows=load_board(api,[category])
     if rows is None:
         return
@@ -240,27 +285,125 @@ def render_pillar(api, category):
     stats=pillar_statistics(own+legacy)
     stats['xp']=sum(10+5*q['difficulty'] for q in own if q['status']=='completed')+sum(q.get('points',0) for q in legacy)
     a,b,c=st.columns(3)
-    a.metric('Quests completed',stats['completed'])
-    b.metric('Pillar XP',stats['xp'])
-    c.metric('This week',stats['week'],delta=f'{stats["week_delta"]:+d} vs previous 7 days')
-    st.caption(f'🔥 {stats["streak"]}-day streak in this pillar')
-    st.subheader('Your activity')
-    st.bar_chart(stats['activity'],x='Date',y='Quests',color='#245C43')
-    st.subheader('Where you can grow next')
+    a.metric({"en": "Quests completed", "pt": "Missões concluídas", "fr": "Quêtes terminées", "de": "Abgeschlossene Quests"}.get(st.session_state.get("language", "en"), "Quests completed"), stats['completed'])
+    b.metric({"en": "Pillar XP", "pt": "XP da área", "fr": "XP du domaine", "de": "Bereichs-XP"}.get(st.session_state.get("language", "en"), "Pillar XP"), stats['xp'])
+    c.metric(
+    {"en": "This week", "pt": "Esta semana", "fr": "Cette semaine", "de": "Diese Woche"}.get(st.session_state.get("language", "en"), "This week"),
+    stats["week"],
+    delta=f'{stats["week_delta"]:+d} ' + {
+        "en": "vs previous 7 days",
+        "pt": "em relação aos 7 dias anteriores",
+        "fr": "par rapport aux 7 jours précédents",
+        "de": "im Vergleich zu den letzten 7 Tagen",
+    }.get(st.session_state.get("language", "en"), "vs previous 7 days")
+)
+    st.caption(f'🔥 {stats["streak"]} ' + {
+    "en": "day streak in this pillar",
+    "pt": "dias consecutivos nesta área",
+    "fr": "jours consécutifs dans ce domaine",
+    "de": "Tage in Folge in diesem Bereich",
+}.get(st.session_state.get("language", "en"), "day streak in this pillar"))
+    st.subheader({
+    "en": "Your activity",
+    "pt": "A tua atividade",
+    "fr": "Ton activité",
+    "de": "Deine Aktivität",
+}.get(st.session_state.get("language", "en"), "Your activity"))
+    chart_labels = {
+        "en": ("Date", "Quests"),
+        "pt": ("Data", "Missões"),
+        "fr": ("Date", "Quêtes"),
+        "de": ("Datum", "Quests"),
+    }
+    date_label, quests_label = chart_labels.get(
+    st.session_state.get("language", "en"),
+    chart_labels["en"]
+    )
+
+    chart_data = stats["activity"].rename(
+    columns={"Date": date_label, "Quests": quests_label}
+    )
+
+    st.bar_chart(chart_data, x=date_label, y=quests_label, color="#245C43")
+    st.subheader({
+    "en": "Where you can grow next",
+    "pt": "Onde podes evoluir a seguir",
+    "fr": "Tes prochaines pistes de progression",
+    "de": "Wo du dich als Nächstes weiterentwickeln kannst",
+}.get(st.session_state.get("language", "en"), "Where you can grow next"))
     for slot in range(1,6):
         plan=slot_plan(category,slot,starting_level(category),own)
         completed=[q for q in own if q.get('slot')==slot and q['status']=='completed']
         with st.expander(TRACKS[category][slot-1][0].replace('_',' ').title()):
-            st.write(f'**Your current step:** {plan["title"]}')
-            st.caption(f'{len(completed)} completed in this habit track. Each completion unlocks the next step.')
+            step_label = {
+                "en": "Your current step",
+                "pt": "O teu passo atual",
+                "fr": "Ton étape actuelle",
+                "de": "Dein aktueller Schritt",
+                    }.get(st.session_state.get("language", "en"), "Your current step")
+
+            st.write(f'**{step_label}:** {plan["title"]}')
+            habit_message = {
+    "en": f"{len(completed)} completed in this habit track. Each completion unlocks the next step.",
+    "pt": f"{len(completed)} missões concluídas neste hábito. Cada conclusão desbloqueia o próximo passo.",
+    "fr": f"{len(completed)} quêtes terminées dans cette habitude. Chaque réussite débloque l'étape suivante.",
+    "de": f"{len(completed)} Quests in diesem Gewohnheitsbereich abgeschlossen. Jeder Abschluss schaltet den nächsten Schritt frei.",
+}.get(st.session_state.get("language", "en"))
+
+            st.caption(habit_message)
             if plan['metric'] and completed and completed[-1].get('target'):
-                st.write(f'Latest completed target: **{completed[-1]["target"]:,}** → current target: **{plan["target"]:,}**')
-    st.subheader('Completed quests')
+                target_labels = {
+    "en": ("Latest completed target", "current target"),
+    "pt": ("Último objetivo concluído", "objetivo atual"),
+    "fr": ("Dernier objectif atteint", "objectif actuel"),
+    "de": ("Letztes erreichtes Ziel", "aktuelles Ziel"),
+}
+
+                previous_label, current_label = target_labels.get(
+    st.session_state.get("language", "en"),
+    target_labels["en"]
+)
+
+                st.write(f'{previous_label}: **{completed[-1]["target"]:,}** → {current_label}: **{plan["target"]:,}**')
+    st.subheader({
+    "en": "Completed quests",
+    "pt": "Missões concluídas",
+    "fr": "Quêtes terminées",
+    "de": "Abgeschlossene Quests",
+}.get(st.session_state.get("language", "en"), "Completed quests"))
     finished=sorted([q for q in own+legacy if q['status']=='completed'],key=lambda q:q.get('completed_at') or '',reverse=True)
     if finished:
-        st.dataframe([{'Quest':q['title'],'Completed':q['completed_at'][:10] if q.get('completed_at') else '',
-                       'XP':q.get('points',0) if q.get('legacy') else 10+5*q['difficulty']} for q in finished],hide_index=True,width='stretch')
+        table_labels = {
+    "en": ("Quest", "Completed"),
+    "pt": ("Missão", "Concluída"),
+    "fr": ("Quête", "Terminée"),
+    "de": ("Quest", "Abgeschlossen"),
+}
+
+        quest_label, completed_label = table_labels.get(
+    st.session_state.get("language", "en"),
+    table_labels["en"]
+)
+
+        st.dataframe([
+    {
+        quest_label: q["title"],
+        completed_label: q["completed_at"][:10] if q.get("completed_at") else "",
+        "XP": q.get("points", 0) if q.get("legacy") else 10 + 5 * q["difficulty"]
+    }
+    for q in finished
+        ], hide_index=True, width="stretch")
     else:
-        st.info('Your first completed quest will appear here. Small starts count.')
-    with st.expander('Your five current quests'):
+        st.info({
+    "en": "Your first completed quest will appear here. Small starts count.",
+    "pt": "A tua primeira missão concluída aparecerá aqui. Cada pequeno passo conta.",
+    "fr": "Ta première quête terminée apparaîtra ici. Chaque petit pas compte.",
+    "de": "Deine erste abgeschlossene Quest erscheint hier. Jeder kleine Schritt zählt.",
+}.get(st.session_state.get("language", "en"), "Your first completed quest will appear here. Small starts count."))
+    with st.expander({
+    "en": "Your five current quests",
+    "pt": "As tuas cinco missões atuais",
+    "fr": "Tes cinq quêtes actuelles",
+    "de": "Deine fünf aktuellen Quests",
+}.get(st.session_state.get("language", "en"), "Your five current quests")):
         render_quest_cards(api,rows,category)

@@ -499,41 +499,236 @@ def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[in
     ]
 
     return len(days), streak, weekly_counts
+TRANSLATIONS = {
+    "en": {
+        "profile": "Your profile",
+        "home": "Home",
+        "squad": "Squad",
+        "leaderboard": "Leaderboard",
+        "settings": "Settings",
+        "language": "🌍 Language",
+        "choose": "Choose your language",
+        "notifications": "Notifications",
+        "reminders": "Daily email reminders",
+        "logout": "Log out",
+    },
+    "pt": {
+        "profile": "O teu perfil",
+        "home": "Início",
+        "squad": "Equipa",
+        "leaderboard": "Classificação",
+        "settings": "Definições",
+        "language": "🌍 Idioma",
+        "choose": "Escolhe o teu idioma",
+        "notifications": "Notificações",
+        "reminders": "Lembretes diários por email",
+        "logout": "Terminar sessão",
+    },
+    "fr": {
+        "profile": "Ton profil",
+        "home": "Accueil",
+        "squad": "Équipe",
+        "leaderboard": "Classement",
+        "settings": "Paramètres",
+        "language": "🌍 Langue",
+        "choose": "Choisis ta langue",
+        "notifications": "Notifications",
+        "reminders": "Rappels quotidiens par e-mail",
+        "logout": "Se déconnecter",
+    },
+    "de": {
+        "profile": "Dein Profil",
+        "home": "Startseite",
+        "squad": "Team",
+        "leaderboard": "Rangliste",
+        "settings": "Einstellungen",
+        "language": "🌍 Sprache",
+        "choose": "Wähle deine Sprache",
+        "notifications": "Benachrichtigungen",
+        "reminders": "Tägliche E-Mail-Erinnerungen",
+        "logout": "Abmelden",
+    },
+}
+
+
+def t(key):
+    language = st.session_state.get("language", "en")
+    return TRANSLATIONS.get(language, TRANSLATIONS["en"]).get(key, key)
+
 def render_settings() -> None:
     profile = st.session_state.profile
-    st.title("Your profile")
+    lang = st.session_state.get("language", "en")
+
+    translations = {
+        "en": {
+            "profile": "Your profile",
+            "notifications": "Notifications",
+            "reminders": "Daily email reminders",
+            "save_error": "We couldn't save your notification setting. Please try again.",
+            "privacy": "Your selected pillars, starting levels and quest feedback personalise your quests.",
+            "ai_privacy": "AI requests go through Requesty and its free model provider; your name and email are not sent.",
+            "next": "Your next chapter starts here",
+        },
+        "pt": {
+            "profile": "O teu perfil",
+            "notifications": "Notificações",
+            "reminders": "Lembretes diários por email",
+            "save_error": "Não foi possível guardar as definições. Tenta novamente.",
+            "privacy": "As áreas escolhidas, os níveis iniciais e o teu feedback personalizam as missões.",
+            "ai_privacy": "Os pedidos de IA passam pelo Requesty e pelo seu fornecedor de modelo gratuito; o teu nome e email não são enviados.",
+            "next": "O teu próximo capítulo começa aqui",
+        },
+        "fr": {
+            "profile": "Ton profil",
+            "notifications": "Notifications",
+            "reminders": "Rappels quotidiens par e-mail",
+            "save_error": "Impossible d'enregistrer ce paramètre. Réessaie.",
+            "privacy": "Tes domaines choisis, tes niveaux de départ et tes commentaires personnalisent tes quêtes.",
+            "ai_privacy": "Les demandes d'IA passent par Requesty et son fournisseur de modèle gratuit ; ton nom et ton e-mail ne sont pas envoyés.",
+            "next": "Ton prochain chapitre commence ici",
+        },
+        "de": {
+            "profile": "Dein Profil",
+            "notifications": "Benachrichtigungen",
+            "reminders": "Tägliche E-Mail-Erinnerungen",
+            "save_error": "Deine Einstellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
+            "privacy": "Deine ausgewählten Bereiche, Startlevel und dein Feedback personalisieren deine Quests.",
+            "ai_privacy": "KI-Anfragen laufen über Requesty und dessen kostenlosen Modellanbieter; dein Name und deine E-Mail werden nicht gesendet.",
+            "next": "Dein nächstes Kapitel beginnt hier",
+        },
+    }
+
+    text = translations.get(lang, translations["en"])
+
+    st.title(text["profile"])
     st.write(f"**{profile.get('display_name', 'Quest explorer')}**")
-    st.caption(f"{profile.get('points', 0)} XP · {profile.get('location') or 'Your next chapter starts here'}")
-    st.subheader("Notifications")
-    reminders = st.toggle("Daily email reminders", value=bool(profile.get("email_reminders", False)))
+    st.caption(
+        f"{profile.get('points', 0)} XP · "
+        f"{profile.get('location') or text['next']}"
+    )
+
+    st.divider()
+    st.subheader(text["notifications"])
+
+    reminders = st.toggle(
+        text["reminders"],
+        value=bool(profile.get("email_reminders", False))
+    )
+
     if reminders != bool(profile.get("email_reminders", False)):
         query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
-        _, error = api_request("PATCH", f"/rest/v1/profiles?{query}",
-                               {"email_reminders": reminders}, st.session_state.access_token)
+        _, error = api_request(
+            "PATCH",
+            f"/rest/v1/profiles?{query}",
+            {"email_reminders": reminders},
+            st.session_state.access_token
+        )
+
         if error:
-            st.error("We couldn’t save your notification setting. Please try again.")
+            st.error(text["save_error"])
         else:
             profile["email_reminders"] = reminders
-    st.caption("Your selected pillars, starting levels and quest feedback personalise your quests. "
-               "AI requests go through Requesty and its free model provider; your name and email are not sent.")
-    if st.button("Log out"):
+
+    st.caption(text["privacy"] + " " + text["ai_privacy"])
+
+    if st.button(t("logout")):
         st.session_state.clear()
         st.rerun()
 
 
 def render_dashboard() -> None:
     profile = st.session_state.profile
+    col_profile, col_language = st.columns([3, 1])
+
+    with col_profile:
+        st.write(f"👤 {profile.get('display_name', 'Quest explorer')}")
+
+    with col_language:
+        languages = {
+            "🇬🇧 English": "en",
+            "🇵🇹 Português": "pt",
+            "🇫🇷 Français": "fr",
+            "🇩🇪 Deutsch": "de",
+        }
+
+        current_language = st.session_state.get("language", "en")
+
+        selected_language = st.selectbox(
+            "🌍",
+            options=list(languages),
+            index=list(languages.values()).index(current_language),
+            key="header_language",
+        )
+
+        if languages[selected_language] != current_language:
+            st.session_state.language = languages[selected_language]
+            st.rerun()
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
     pages = ["🏠 Home", *pillar_pages, "👥 Squad", "🏆 Leaderboard", "⚙️ Settings"]
+    def nav_label(item):
+        labels = {
+            "🏠 Home": t("home"),
+            "👥 Squad": t("squad"),
+            "🏆 Leaderboard": t("leaderboard"),
+            "⚙️ Settings": t("settings"),
+        }
+
+        language = st.session_state.get("language", "en")
+        if "Finance" in item:
+            return item.replace("Finance", {
+                "en": "Finance",
+                "pt": "Finanças",
+                "fr": "Finances",
+                "de": "Finanzen",
+            }.get(language, "Finance"))
+        if "Adventure" in item:
+            return item.replace("Adventure", {
+                "en": "Adventure",
+                "pt": "Aventura",
+                "fr": "Aventure",
+                "de": "Abenteuer",
+            }.get(language, "Adventure"))
+        if "Social" in item:
+            return item.replace("Social", {
+                "en": "Social",
+                "pt": "Vida Social",
+                "fr": "Vie sociale",
+                "de": "Soziales",
+            }.get(language, "Social"))
+        if "Personal Growth" in item:
+            return item.replace("Personal Growth", {
+                "en": "Personal Growth",
+                "pt": "Desenvolvimento Pessoal",
+                "fr": "Développement personnel",
+                "de": "Persönliche Entwicklung",
+            }.get(language, "Personal Growth"))
+        if "Languages" in item:
+            return item.replace("Languages", {
+                "en": "Languages",
+                "pt": "Idiomas",
+                "fr": "Langues",
+                "de": "Sprachen",
+            }.get(language, "Languages"))
+        if "Health" in item:
+            return item.replace("Health", {
+                "en": "Health",
+                "pt": "Saúde",
+                "fr": "Santé",
+                "de": "Gesundheit",
+            }.get(language, "Health"))
+
+        return labels.get(item, item.replace("Fitness", {
+            "en": "Fitness",
+            "pt": "Exercício",
+            "fr": "Sport",
+            "de": "Fitness",
+        }.get(language, "Fitness")))
     if st.session_state.get("current_page") not in pages:
         st.session_state.current_page = "🏠 Home"
-    st.markdown("""<style>
-    .stMainBlockContainer {max-width:900px;padding-top:2rem;padding-bottom:115px;}
-    .st-key-bottom_navigation {position:fixed;bottom:0;left:0;right:0;z-index:999;
-       background:rgba(255,255,255,.97);border-top:1px solid #dbe9e0;
-       padding:12px max(14px, calc((100vw - 900px)/2));padding-bottom:max(12px,env(safe-area-inset-bottom));
-       box-shadow:0 -4px 24px #173d2610;}
+    st.markdown("""
+    <style>
+    .stMainBlockContainer {max-width:900px;padding-top:5rem;padding-bottom:115px;}
     .st-key-bottom_navigation [role="radiogroup"] {display:flex;flex-wrap:nowrap!important;
        gap:10px;overflow-x:auto;scrollbar-width:thin;padding:3px 0;}
     .st-key-bottom_navigation [role="radiogroup"] label {white-space:nowrap;border-radius:15px;
@@ -546,7 +741,7 @@ def render_dashboard() -> None:
     div.stButton>button {border-radius:12px;min-height:42px;}
     </style>""", unsafe_allow_html=True)
     with st.container(key="bottom_navigation"):
-        page = st.radio("Explore Life Quest", pages, key="current_page", horizontal=True, label_visibility="collapsed")
+       page = st.radio("Explore Life Quest", pages, key="current_page", horizontal=True, label_visibility="collapsed", format_func=nav_label)
     if page == "🏠 Home":
         render_home(api_request)
     elif page in pillar_pages:
@@ -556,18 +751,66 @@ def render_dashboard() -> None:
     elif page == "⚙️ Settings":
         render_settings()
     elif page == "🏆 Leaderboard":
-        st.title("Weekly leaderboard")
-        st.caption("XP earned since the start of this week")
-        leaderboard, error = api_request("POST", "/rest/v1/rpc/get_weekly_leaderboard", {}, st.session_state.access_token)
+        st.title({
+            "en": "Weekly leaderboard",
+            "pt": "Classificação semanal",
+            "fr": "Classement hebdomadaire",
+            "de": "Wöchentliche Rangliste",
+        }.get(st.session_state.get("language", "en")))
+
+        st.caption({
+            "en": "XP earned since the start of this week",
+            "pt": "XP ganhos desde o início desta semana",
+            "fr": "XP gagnés depuis le début de cette semaine",
+            "de": "Seit Beginn dieser Woche verdiente XP",
+        }.get(st.session_state.get("language", "en")))
+
+        leaderboard, error = api_request(
+            "POST",
+            "/rest/v1/rpc/get_weekly_leaderboard",
+            {},
+            st.session_state.access_token
+        )
+
         if error:
-            st.error("The leaderboard could not be loaded. Please try again.")
+            st.error({
+                "en": "The leaderboard could not be loaded. Please try again.",
+                "pt": "Não foi possível carregar a classificação. Tenta novamente.",
+                "fr": "Impossible de charger le classement. Réessaie.",
+                "de": "Die Rangliste konnte nicht geladen werden. Bitte versuche es erneut.",
+            }.get(st.session_state.get("language", "en")))
+
         elif leaderboard:
-            st.dataframe([{"Rank":i,"Player":row["display_name"],"XP":row["weekly_points"],"Quests":row["quests_completed"]}
-                          for i,row in enumerate(leaderboard,1)],hide_index=True,use_container_width=True)
+            lang = st.session_state.get("language", "en")
+            labels = {
+                "en": ["Rank", "Player", "XP", "Quests"],
+                "pt": ["Posição", "Jogador", "XP", "Missões"],
+                "fr": ["Rang", "Joueur", "XP", "Quêtes"],
+                "de": ["Rang", "Spieler", "XP", "Quests"],
+            }
+            headers = labels.get(lang, labels["en"])
+
+            st.dataframe(
+                [
+                    {
+                        headers[0]: i,
+                        headers[1]: row["display_name"],
+                        headers[2]: row["weekly_points"],
+                        headers[3]: row["quests_completed"],
+                    }
+                    for i, row in enumerate(leaderboard, 1)
+                ],
+                hide_index=True,
+                use_container_width=True
+            )
         else:
-            st.info("Complete a quest to appear on this week’s leaderboard.")
-
-
+            st.info({
+                "en": "Complete a quest to appear on this week's leaderboard.",
+                "pt": "Conclui uma missão para aparecer na classificação desta semana.",
+                "fr": "Termine une quête pour apparaître dans le classement de cette semaine.",
+                "de": "Schließe eine Quest ab, um in der Rangliste dieser Woche zu erscheinen.",
+            }.get(st.session_state.get("language", "en")))
+        
 initialise_state()
 
 if supabase_config() is None:

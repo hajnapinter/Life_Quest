@@ -12,7 +12,7 @@ class QuestGenerationError(Exception):
     pass
 
 
-def generate_slot_quests(api_key, plans, history):
+def generate_slot_quests(api_key, plans, history, language="en"):
     if not api_key:
         raise QuestGenerationError('The AI service is not connected.')
     properties = {'slot': {'type':'integer'}, 'title':{'type':'string'},
@@ -38,6 +38,22 @@ Use free, readily available options and equipment already owned. A free class/vi
 Finance is learning/planning, never trading or personalised investing advice. Respect social consent.
 No dangerous stunts, intense exercise prescriptions, medical treatment, restrictive diets or mandatory
 purchases. Movement should be adaptable and comfortable. Return only JSON with a quests array. Each quest must contain exactly these fields: slot (integer), title, description, minutes (integer). Do not echo focus, target, pillar or category. For walking, never claim a fixed duration guarantees the step count."""
+    language_names = {
+        "en": "English",
+        "pt": "European Portuguese",
+        "fr": "French",
+        "de": "German",
+    }
+    language_name = language_names.get(language, "English")
+
+    instructions += f"""
+
+IMPORTANT LANGUAGE RULE:
+Write every quest title and description in {language_name}.
+Use natural, fluent language suitable for native speakers.
+Keep all numeric targets exactly unchanged.
+Do not mix languages.
+"""
     headers={'Authorization':'Bearer '+api_key,'Content-Type':'application/json'}
     try:
         with urlopen(Request(REQUESTY_BASE+'/models',headers=headers),timeout=8) as response:
