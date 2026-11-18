@@ -15,10 +15,11 @@ from collections import Counter
 
 import streamlit as st
 from onboarding import render_onboarding
-from ai_quest_ui import render_home, render_pillar, prepare_initial_quests, fetch_quests, quests_shown, category_name
+from ai_quest_ui import render_home, render_pillar, render_recap, prepare_initial_quests, fetch_quests, quests_shown, category_name
 from onboarding import PILLARS
 from social_play import render_social
 from design import apply_styles, brand, hero, profile_card, splash
+from i18n import language_picker
 from places import city_picker, clear_city_picker
 from pro import pillar_limit, render_pro_card, is_pro
 from account import photo as account_photo, ring as account_ring, render_photo_setting, render_push_setting
@@ -454,7 +455,7 @@ def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[in
 TRANSLATIONS = {
     "en": {
         "profile": "Your profile",
-        "home": "Home",
+        "home": "Home", "recap": "Recap",
         "squad": "Squad",
         "leaderboard": "Leaderboard",
         "settings": "Settings",
@@ -466,7 +467,7 @@ TRANSLATIONS = {
     },
     "pt": {
         "profile": "O teu perfil",
-        "home": "Início",
+        "home": "Início", "recap": "Resumo",
         "squad": "Equipa",
         "leaderboard": "Classificação",
         "settings": "Definições",
@@ -478,7 +479,7 @@ TRANSLATIONS = {
     },
     "fr": {
         "profile": "Ton profil",
-        "home": "Accueil",
+        "home": "Accueil", "recap": "Bilan",
         "squad": "Équipe",
         "leaderboard": "Classement",
         "settings": "Paramètres",
@@ -490,7 +491,7 @@ TRANSLATIONS = {
     },
     "de": {
         "profile": "Dein Profil",
-        "home": "Startseite",
+        "home": "Startseite", "recap": "Rückblick",
         "squad": "Team",
         "leaderboard": "Rangliste",
         "settings": "Einstellungen",
@@ -714,32 +715,14 @@ def render_dashboard() -> None:
         brand()
 
     with col_language:
-        languages = {
-            "🇬🇧 English": "en",
-            "🇵🇹 Português": "pt",
-            "🇫🇷 Français": "fr",
-            "🇩🇪 Deutsch": "de",
-        }
-
-        current_language = st.session_state.get("language", "en")
-
-        selected_language = st.selectbox(
-            "🌍",
-            options=list(languages),
-            index=list(languages.values()).index(current_language),
-            key="header_language",
-            label_visibility="collapsed",
-        )
-
-        if languages[selected_language] != current_language:
-            st.session_state.language = languages[selected_language]
-            st.rerun()
+        language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", *pillar_pages, "👥 Squad", "⚙️ Settings"]
+    pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚙️ Settings"]
     def nav_label(item):
         labels = {
             "🏠 Home": t("home"),
+            "📊 Recap": t("recap"),
             "👥 Squad": t("squad"),
             "🏆 Leaderboard": t("leaderboard"),
             "⚙️ Settings": t("settings"),
@@ -803,6 +786,8 @@ def render_dashboard() -> None:
         render_home(api_request)
     elif page in pillar_pages:
         render_pillar(api_request, pillar_pages[page])
+    elif page == "📊 Recap":
+        render_recap(api_request)
     elif page == "👥 Squad":
         render_squad()
     elif page == "⚙️ Settings":

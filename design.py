@@ -202,6 +202,20 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
 .st-key-card_quests_shown [data-testid="stButtonGroup"] button {flex:1 1 0; justify-content:center;}
 .st-key-card_quests_shown [data-testid="stHorizontalBlock"] {margin-bottom:-4px;}
 
+/* ---------- Adaptivity hint under a quest ---------- */
+.lq-trend {display:block; font-size:12.5px; font-weight:600; margin:-6px 0 0 30px;}
+.lq-trend.up {color:#3E9B63;}
+.lq-trend.down {color:%(action)s;}
+
+/* ---------- Recap: quests per pillar ---------- */
+.lq-bars {background:%(surface)s; border-radius:22px; padding:16px 18px; display:grid; gap:12px;
+  box-shadow:0 8px 22px -16px rgba(43,35,48,.45); animation:lq-up .45s ease-out both;}
+.lq-bars .row {display:grid; grid-template-columns:minmax(0,10rem) minmax(0,1fr) 2rem; gap:12px; align-items:center;}
+.lq-bars .name {font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.lq-bars .track {height:12px; border-radius:999px; background:#F3ECE7; overflow:hidden;}
+.lq-bars .track i {display:block; height:100%%; border-radius:999px; transform-origin:left; animation:lq-fill .8s cubic-bezier(.2,.9,.3,1) both;}
+.lq-bars .n {text-align:right; font-weight:600; font-variant-numeric:tabular-nums;}
+
 /* ---------- People ---------- */
 .lq-avatar {width:64px; height:64px; border-radius:50%%; padding:3px; background:var(--ring); flex:none;
   transition:transform .3s cubic-bezier(.2,1.4,.4,1);}
@@ -516,3 +530,15 @@ def squad_ranking(rows: list[dict], me: str, title: str, xp_label: str = "XP", q
                 f'<span class="pts">{int(r["points"])} {html.escape(xp_label)}'
                 f'<small>{int(r["quests"])} {html.escape(quests_label)}</small></span></div>')
     st.markdown(out + "</div>", unsafe_allow_html=True)
+
+
+def pillar_bars(items: list[tuple[str, str, int]]) -> None:
+    """Horizontal bars: items are (category, label with icon, count), largest first."""
+    top = max((count for _, _, count in items), default=0) or 1
+    rows = "".join(
+        f'<div class="row"><span class="name">{html.escape(label)}</span>'
+        f'<span class="track"><i style="width:{round(100 * count / top)}%; background:{pillar_colors(category)[1]}"></i></span>'
+        f'<span class="n">{int(count)}</span></div>'
+        for category, label, count in items
+    )
+    st.markdown(f'<div class="lq-bars">{rows}</div>', unsafe_allow_html=True)

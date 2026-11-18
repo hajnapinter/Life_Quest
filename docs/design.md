@@ -73,6 +73,9 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 | People in a squad | `member_chips(names)` |
 | Logo + "Life Quest" label at the top of a screen | `brand()` (sprout logo `LOGO_SVG`; tilts on hover) |
 | Loading screen | `splash()`: the sprout grows, then fades after ~1.5s; `app.py` shows it once per session |
+| Quest target changed since last time | `trend_html(direction, previous)` under the checkbox (`.lq-trend.up` green / `.down` orange) |
+| Counts per pillar | `pillar_bars(items)`: horizontal bars in each pillar's strong colour (used on the Recap page) |
+| Language selector | `i18n.language_picker(key)` (dashboard header and onboarding) |
 | Primary call to action | `st.button(..., type="primary")`; at most one primary button per view; `width="stretch"` on narrow forms |
 
 ## Motion

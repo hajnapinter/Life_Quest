@@ -36,12 +36,13 @@ Without an AI key it still works: quests then come from the built-in habit libra
 - Onboarding: nickname, pillars (up to 3, all 7 with Pro), starting level per pillar, how many quests to show, city search.
 - Five adaptive quests kept ready per pillar; harder after a success, easier after "too hard"; shown 1–5 at a time.
 - Optional free AI wording of quests, strictly validated, with a habit-library fallback.
-- Pillar pages with XP, weekly change, streak, a 14-day activity grid and next steps.
+- Pillar pages with XP, weekly change, streak, a 14-day activity grid and next steps; each quest shows when its target adapted ("↑ up from 4,000 last time").
+- Weekly recap with a per-pillar breakdown and a CSV export of all completed quests.
 - Squads with invite codes, shared weekly quests needing two confirmations, and a weekly squad ranking.
 - Daily 1v1 competitions with friends and weekly winners.
 - Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo, phone/laptop notifications, email reminders.
 - Life Quest Pro (demo subscription): all pillars, avatar styles, country-personalised quests (placeholder), and a list of features that would need paid APIs.
-- English, Portuguese, French and German; works on phone and desktop.
+- English, Portuguese, French and German everywhere after login (onboarding included); works on phone and desktop.
 
 ## How it is built
 

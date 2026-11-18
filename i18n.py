@@ -58,3 +58,24 @@ def t(key):
         language, TRANSLATIONS["en"]
     ).get(key, key)
 
+
+
+LANGUAGES = {
+    "🇬🇧 English": "en",
+    "🇵🇹 Português": "pt",
+    "🇫🇷 Français": "fr",
+    "🇩🇪 Deutsch": "de",
+}
+
+
+def language_picker(key: str) -> None:
+    """Compact language selector; changing it re-runs the page in the new language."""
+    current = st.session_state.get("language", "en")
+    codes = list(LANGUAGES.values())
+    choice = st.selectbox(
+        "🌍", list(LANGUAGES), index=codes.index(current) if current in codes else 0,
+        key=key, label_visibility="collapsed",
+    )
+    if LANGUAGES[choice] != current:
+        st.session_state.language = LANGUAGES[choice]
+        st.rerun()

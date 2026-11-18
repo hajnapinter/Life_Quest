@@ -1,3 +1,4 @@
+import html
 import os
 import time
 import threading
@@ -6,8 +7,8 @@ from urllib.parse import urlencode
 import streamlit as st
 from ai_quests import generate_slot_quests, QuestGenerationError
 from onboarding import PILLARS
-from quest_plan import slot_plan, pillar_statistics, TRACKS, clean_title, EXPERIENCE_FOCUSES
-from design import greeting, hero, pillar_header, heatmap
+from quest_plan import slot_plan, pillar_statistics, TRACKS, clean_title, EXPERIENCE_FOCUSES, progress_hint, weekly_recap, completed_csv
+from design import greeting, hero, pillar_header, heatmap, pillar_bars
 from pro import is_pro
 from account import photo as account_photo, ring as account_ring
 
@@ -23,6 +24,10 @@ def ai_config():
 @st.cache_resource
 def generation_guard():
     return {}, threading.Lock()
+
+
+def _tx(en, pt, fr, de):
+    return {"en": en, "pt": pt, "fr": fr, "de": de}.get(st.session_state.get("language", "en"), en)
 
 
 def fetch_quests(api):
@@ -84,9 +89,9 @@ def save_batch(api, batch, pending_key, finished_id=None, rating='just_right', s
     points,error=api('POST','/rest/v1/rpc/save_quest_slots',
         {'quest_rows':stored,'finished_id':finished_id,'rating':rating,'skip':skip},st.session_state.access_token)
     if error:
-        return 'We couldn’t save the quest update. Please retry. Your progress and previous quests have been kept.'
+        return _tx('We couldn’t save the quest update. Please retry. Your progress and previous quests have been kept.','Não foi possível guardar a atualização. Tenta novamente. O teu progresso e as missões anteriores foram mantidos.','Impossible d’enregistrer la mise à jour. Réessaie. Tes progrès et tes quêtes précédentes sont conservés.','Die Aktualisierung konnte nicht gespeichert werden. Bitte versuche es erneut. Dein Fortschritt und deine bisherigen Quests bleiben erhalten.')
     if type(points) is not int:
-        return 'The quest update could not be verified. Please refresh before trying again.'
+        return _tx('The quest update could not be verified. Please refresh before trying again.','Não foi possível confirmar a atualização. Atualiza a página antes de tentar outra vez.','La mise à jour n’a pas pu être vérifiée. Actualise la page avant de réessayer.','Die Aktualisierung konnte nicht bestätigt werden. Bitte lade die Seite neu und versuche es dann erneut.')
     st.session_state.profile['points']=points
     st.session_state.pop(pending_key,None)
     return None
@@ -110,7 +115,7 @@ def ensure_five_quests(api, rows, categories):
 def prepare_initial_quests(api):
     rows,error=fetch_quests(api)
     if error:
-        return 'Your profile is saved. We couldn’t load quest storage yet.'
+        return _tx('Your profile is saved. We couldn’t load quest storage yet.','O teu perfil foi guardado. Ainda não foi possível carregar as missões.','Ton profil est enregistré. Impossible de charger les quêtes pour le moment.','Dein Profil ist gespeichert. Die Quests konnten noch nicht geladen werden.')
     _,error=ensure_five_quests(api,rows,[c for c in st.session_state.profile.get('selected_categories',[]) if c in PILLARS])
     return error
 
@@ -149,7 +154,7 @@ def process_completions(api, rows):
             remove_request(quest_id)
             continue
         before=st.session_state.profile.get('points',0)
-        with st.spinner('Unlocking your next quest…'):
+        with st.spinner(_tx('Unlocking your next quest…','A desbloquear a tua próxima missão…','Déblocage de ta prochaine quête…','Deine nächste Quest wird freigeschaltet…')):
             error=replace_quest(api,quest,rows)
         if error:
             # Reset before this run renders the checkbox, so the user can retry.
@@ -159,13 +164,29 @@ def process_completions(api, rows):
             continue
         remove_request(quest_id)
         gained=max(0,st.session_state.profile.get('points',before)-before)
-        st.session_state.quest_toast=f'+{gained} XP · New quest unlocked!' if gained else 'Quest saved · Your next one is ready!'
+        st.session_state.quest_toast=(f'+{gained} XP · '+_tx('New quest unlocked!','Nova missão desbloqueada!','Nouvelle quête débloquée !','Neue Quest freigeschaltet!')) if gained else _tx('Quest saved · Your next one is ready!','Missão guardada · A próxima está pronta!','Quête enregistrée · La suivante est prête !','Quest gespeichert · Die nächste ist bereit!')
         refreshed,error=fetch_quests(api)
         if error:
-            st.warning('Your completion was saved. Refresh to see the new quest.')
+            st.warning(_tx('Your completion was saved. Refresh to see the new quest.','A tua conclusão foi guardada. Atualiza para ver a nova missão.','Ta quête terminée est enregistrée. Actualise pour voir la nouvelle.','Dein Abschluss wurde gespeichert. Lade neu, um die neue Quest zu sehen.'))
             return None
         rows=refreshed
     return rows
+
+def format_number(n):
+    """4,000 / 4 000 / 4.000 depending on the language."""
+    text=f'{int(n):,}'
+    return {'pt':text.replace(',',' '),'fr':text.replace(',',' '),'de':text.replace(',','.')}.get(
+        st.session_state.get('language','en'),text)
+
+
+def trend_html(direction, previous):
+    """Small line under a quest showing that its target adapted since last time."""
+    n=format_number(previous)
+    text=(_tx(f'↑ up from {n} last time',f'↑ mais do que os {n} da última vez',f'↑ plus que {n} la dernière fois',f'↑ mehr als {n} beim letzten Mal')
+          if direction=='up' else
+          _tx(f'↓ eased from {n} last time',f'↓ mais leve do que os {n} da última vez',f'↓ allégé par rapport à {n} la dernière fois',f'↓ leichter als {n} beim letzten Mal'))
+    return f'<span class="lq-trend {direction}">{html.escape(text)}</span>'
+
 
 def render_quest_cards(api, rows, category, limit=5):
     language = st.session_state.get("language", "en")
@@ -177,29 +198,32 @@ def render_quest_cards(api, rows, category, limit=5):
             title=slot_plan(category,quest['slot'],starting_level(category),rows)['title']
         with st.container(key='quest_row_'+quest['id']):
             st.checkbox(title,key='quest_check_'+quest['id'],on_change=queue_completion,args=(quest['id'],))
+            hint=progress_hint(quest,rows)
+            if hint:
+                st.markdown(trend_html(*hint),unsafe_allow_html=True)
 
 
 def load_board(api, categories):
     rows,error=fetch_quests(api)
     if error:
-        st.error('Your quests could not be loaded. Please refresh to reconnect.')
+        st.error(_tx('Your quests could not be loaded. Please refresh to reconnect.','Não foi possível carregar as tuas missões. Atualiza a página para voltar a ligar.','Impossible de charger tes quêtes. Actualise la page pour te reconnecter.','Deine Quests konnten nicht geladen werden. Lade die Seite neu, um dich erneut zu verbinden.'))
         return None
     rows=process_completions(api,rows)
     if rows is None:
         return None
     missing=any(sum(q['category']==c and q['status']=='active' for q in rows)<5 for c in categories)
     if missing:
-        with st.spinner('Preparing five practical quests for each of your pillars…'):
+        with st.spinner(_tx('Preparing five practical quests for each of your pillars…','A preparar cinco missões práticas para cada uma das tuas áreas…','Préparation de cinq quêtes concrètes pour chacun de tes domaines…','Fünf praktische Quests für jeden deiner Bereiche werden vorbereitet…')):
             rows,error=ensure_five_quests(api,rows,categories)
         if error:
             st.error(error)
-            if st.button('Retry loading quests'):
+            if st.button(_tx('Retry loading quests','Tentar carregar novamente','Réessayer de charger les quêtes','Quests erneut laden')):
                 st.rerun()
             return None
     if st.session_state.get('quest_toast'):
         st.toast(st.session_state.pop('quest_toast'),icon='🌱')
     if st.session_state.pop('quest_library_used',False):
-        st.caption('Some quests come from our practical habit library while AI is unavailable.')
+        st.caption(_tx('Some quests come from our practical habit library while AI is unavailable.','Algumas missões vêm da nossa biblioteca de hábitos enquanto a IA não está disponível.','Certaines quêtes viennent de notre bibliothèque d’habitudes tant que l’IA est indisponible.','Einige Quests stammen aus unserer Gewohnheitsbibliothek, solange die KI nicht verfügbar ist.'))
     st.session_state.ai_completed_count=sum(q['status']=='completed' for q in rows)
     return rows
 
@@ -391,3 +415,62 @@ def render_pillar(api, category):
     "de": "Deine aktuellen Quests",
 }.get(st.session_state.get("language", "en"), "Your current quests")):
         render_quest_cards(api,rows,category,limit=quests_shown(category))
+
+
+WEEKDAYS={'en':['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+          'pt':['segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado','domingo'],
+          'fr':['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'],
+          'de':['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']}
+
+
+def recap_rows(rows):
+    """Completed pillar quests plus completed shared challenges, in one list."""
+    lookup={q['id']:q for q in st.session_state.get('challenges',[])}
+    legacy=[]
+    for q in st.session_state.get('legacy_completions',[]):
+        challenge=lookup.get(q.get('challenge_id'),{})
+        if challenge:
+            legacy.append({'category':challenge.get('category'),'title':challenge.get('title',''),'status':'completed',
+                           'completed_at':q.get('completed_at'),'points':challenge.get('points',0)})
+    return rows+legacy
+
+
+def render_recap(api):
+    """Weekly recap with a per-pillar breakdown and a CSV export of every completed quest."""
+    language=st.session_state.get('language','en')
+    st.markdown('<div class="lq-eyebrow">'+_tx('Weekly recap','Resumo semanal','Bilan de la semaine','Wochenrückblick')+'</div>',unsafe_allow_html=True)
+    st.title(_tx('Your week','A tua semana','Ta semaine','Deine Woche'))
+    rows,error=fetch_quests(api)
+    if error:
+        st.error(_tx('Your quests could not be loaded. Please refresh to reconnect.','Não foi possível carregar as tuas missões. Atualiza a página para voltar a ligar.',
+                     'Impossible de charger tes quêtes. Actualise la page pour te reconnecter.','Deine Quests konnten nicht geladen werden. Lade die Seite neu, um dich erneut zu verbinden.'))
+        return
+    everything=recap_rows(rows)
+    recap=weekly_recap(everything)
+    st.caption(_tx('Since Monday','Desde segunda-feira','Depuis lundi','Seit Montag')+f' · {recap["week_start"].isoformat()}')
+    a,b,c=st.container(key='stat_row_recap').columns(3)
+    a.metric(_tx('Quests completed','Missões concluídas','Quêtes terminées','Abgeschlossene Quests'),recap['completed'],
+             delta=f'{recap["delta"]:+d} '+_tx('vs last week','vs semana passada','vs semaine dernière','vs letzte Woche'))
+    b.metric(_tx('XP earned','XP ganho','XP gagnés','Verdiente XP'),recap['xp'])
+    c.metric(_tx('Active days','Dias ativos','Jours actifs','Aktive Tage'),f'{recap["active_days"]}/7')
+    if recap['completed']:
+        st.subheader(_tx('By pillar','Por área','Par domaine','Nach Bereich'))
+        pillar_bars([(cat,f'{PILLARS.get(cat,("•",))[0]} {category_name(cat)}',n) for cat,n in recap['per_pillar'].items()])
+        day,count=recap['best_day']
+        st.caption('🌟 '+_tx('Best day','Melhor dia','Meilleur jour','Bester Tag')+f': {WEEKDAYS.get(language,WEEKDAYS["en"])[day.weekday()]} · {count} '
+                   +_tx('quests','missões','quêtes','Quests'))
+    else:
+        st.info(_tx('No quests completed this week yet. Your first one will show up here.',
+                    'Ainda não concluíste missões esta semana. A primeira vai aparecer aqui.',
+                    'Aucune quête terminée cette semaine pour l’instant. La première apparaîtra ici.',
+                    'Diese Woche noch keine Quest abgeschlossen. Deine erste erscheint hier.'))
+    with st.container(key='card_export'):
+        st.subheader(_tx('Export your history','Exportar o teu histórico','Exporter ton historique','Verlauf exportieren'))
+        total=sum(1 for q in everything if q.get('status')=='completed')
+        st.caption(_tx(f'All {total} completed quests as a CSV file. Opens in Excel, Numbers or Google Sheets.',
+                       f'As {total} missões concluídas num ficheiro CSV. Abre no Excel, Numbers ou Google Sheets.',
+                       f'Tes {total} quêtes terminées dans un fichier CSV. S’ouvre avec Excel, Numbers ou Google Sheets.',
+                       f'Alle {total} abgeschlossenen Quests als CSV-Datei. Öffnet sich in Excel, Numbers oder Google Sheets.'))
+        st.download_button('⬇️ '+_tx('Download CSV','Descarregar CSV','Télécharger le CSV','CSV herunterladen'),
+                           data=completed_csv(everything),file_name=f'life-quest-history-{recap["week_start"].isoformat()}.csv',
+                           mime='text/csv',disabled=total==0,type='primary',key='export_csv')

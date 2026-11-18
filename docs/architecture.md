@@ -20,14 +20,15 @@ flowchart LR
 | File | What it does |
 |---|---|
 | `app.py` | Entry point: login/sign-up, Supabase requests (`api_request`), dashboard, navigation, Settings |
-| `onboarding.py` | First-run questions: nickname, pillars (max 3 on free), starting levels, quests shown, city |
-| `ai_quest_ui.py` | Home and pillar pages: loading, completing and replacing quests, statistics |
-| `quest_plan.py` | Pure logic: the 5 habit tracks per pillar, difficulty progression, statistics |
+| `onboarding.py` + `onboarding_text.py` | First-run questions (nickname, pillars (max 3 on free), starting levels, quests shown, city) and their translations |
+| `ai_quest_ui.py` | Home, pillar and Recap pages: loading, completing and replacing quests, statistics, CSV export |
+| `quest_plan.py` | Pure logic: the 5 habit tracks per pillar, difficulty progression, statistics, weekly recap, CSV export, adaptivity hint |
 | `ai_quests.py` | Optional AI wording of quests, with strict checks on every answer |
 | `social_play.py` | Squads, shared squad quests, weekly squad ranking, 1v1 competitions |
 | `pro.py` | Life Quest Pro (demo subscription): plans, pillar limit, Pro card |
 | `account.py` | Profile photo, avatar ring (Pro), phone/laptop notifications |
 | `places.py` | City search with the free Photon (OpenStreetMap) API |
+| `i18n.py` | Shared translations and the language picker |
 | `design.py` + `.streamlit/config.toml` | The whole visual design: theme, CSS, reusable HTML pieces (see `docs/design.md`) |
 | `auth_helpers.py`, `auth_component/` | Login helpers and the Google sign-in button (PKCE flow) |
 | `supabase/*.sql` | Tables, security rules and database functions |
@@ -62,7 +63,10 @@ flowchart LR
 3. **Complete a quest**: ticking the box calls the database function `save_quest_slots`, which in **one transaction** marks it done, awards XP and stores the next quest. If anything fails, nothing is half-saved.
 4. **Progression**: `quest_plan.slot_plan` makes the next quest a bit harder after a success and easier after "too hard", within fixed limits.
 5. **Squads**: create or join with an invite code; shared quests need two confirmations; the Squad page ranks members by this week's XP.
-6. **Settings**: pillars (3 free / 7 Pro), quests shown per pillar, city, photo, notifications, Pro.
+6. **Weekly recap**: quests and XP since Monday vs last week, a per-pillar breakdown, the best day, and a CSV export of every completed quest.
+7. **Settings**: pillars (3 free / 7 Pro), quests shown per pillar, city, photo, notifications, Pro.
+
+Each quest whose target changed since the last time shows a small line such as "↑ up from 4,000 last time", which makes the adaptive difficulty visible.
 
 ## 5. Security
 
@@ -70,7 +74,7 @@ flowchart LR
 - **Access control**: Row Level Security on every table; users can only read and change their own rows. Anything that awards XP runs in `security definer` database functions that check `auth.uid()`; the app cannot just "add points".
 - **XP protection**: `supabase/protect-profile-points.sql` limits which profile columns users may write, so XP cannot be edited directly through the API.
 - **Input validation**: email format, password ≥ 8 characters and matching, nickname ≤ 30, squad name 2–50, city search ≤ 80 characters, photo type and size (≤ 8 MB, re-encoded to 80×80 JPEG), and every AI answer is checked (`validate_batch`) before use.
-- **Output safety**: user text is HTML-escaped before it is shown in custom HTML.
+- **Output safety**: user text is HTML-escaped before it is shown in custom HTML, and CSV exports neutralise cells starting with `= + - @` so a spreadsheet never runs them as formulas (CSV injection).
 - **Dependencies**: three direct dependencies (`streamlit`, `pillow`, `pytest` for tests), pinned to exact versions in `pyproject.toml`/`uv.lock`/`requirements.txt`, and checked with `pip-audit` on every push.
 
 **Known limits** (say these honestly if asked):
@@ -89,6 +93,7 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 | `test_ai_quests.py` | Accepted and rejected AI answers (13 kinds of bad output), free-model check, network failures |
 | `test_features.py` | City search (results, too-short and long queries, service down), Pro limits, photo processing, HTML escaping |
 | `test_app_screens.py` | The real app starts; missing configuration message; login and sign-up reject bad input; Supabase unreachable |
+| `test_recap_and_text.py` | Weekly recap (week boundaries, XP, per pillar), CSV export (order, formula neutralising), adaptivity hint, and that all four languages have every text |
 | `test_security.py` | No committed credentials; secrets file ignored; XP not user-writable |
 | `oauth.test.cjs` | PKCE, replayed or foreign messages, expired verifier, failed exchange |
 
@@ -117,6 +122,8 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 2. Complete a quest on Home: it fades, XP goes up, a new quest appears.
 3. Open a pillar page: stats, 14-day activity, "Where you can grow next".
 4. Squad: create a squad, show the invite code and weekly ranking.
-5. Settings: change quests per pillar, search a city, upload a photo, subscribe to Pro (yearly), pick an avatar ring.
-6. Show invalid input: wrong email on login, short password on sign-up.
-7. Show the green "Tests" check on GitHub.
+5. Recap: show the week's numbers and download the CSV.
+6. Settings: change quests per pillar, search a city, upload a photo, subscribe to Pro (yearly), pick an avatar ring.
+7. Switch the language to Portuguese and show that everything follows.
+8. Show invalid input: wrong email on login, short password on sign-up.
+9. Show the green "Tests" check on GitHub.

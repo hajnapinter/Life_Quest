@@ -21,7 +21,7 @@ PLANS = {
 
 TEXT = {
     "en": {
-        "soon_title": 'Coming soon with Pro', "soon": ['📍 Quests at real places and events near you', '🌦️ Weather-aware quests, with indoor ideas on rainy days', '🏃 Steps and workouts synced from Apple Health or Google Fit complete fitness quests automatically', '📅 Quests scheduled into free slots in your calendar', '🗣️ Spoken practice with an AI language coach', '📊 A personal weekly progress report'],
+        "soon_title": 'Coming soon with Pro', "soon": ['📍 Quests at real places and events near you', '🌦️ Weather-aware quests, with indoor ideas on rainy days', '🏃 Steps and workouts synced from Apple Health or Google Fit complete fitness quests automatically'],
         "eyebrow": "Life Quest Pro", "title": "Go further with Pro",
         "f_country": "Quests personalised to your country: local language, currency and seasons",
         "f_pillars": "All 7 pillars (free plan: up to 3)",
@@ -36,7 +36,7 @@ TEXT = {
         "error": "We couldn't update your plan. Please try again.",
     },
     "pt": {
-        "soon_title": 'Brevemente no Pro', "soon": ['📍 Missões em locais e eventos reais perto de ti', '🌦️ Missões que se adaptam ao tempo, com ideias para dias de chuva', '🏃 Passos e treinos do Apple Health ou Google Fit concluem missões de exercício automaticamente', '📅 Missões agendadas nos espaços livres do teu calendário', '🗣️ Prática oral com um tutor de línguas com IA', '📊 Um relatório semanal de progresso personalizado'],
+        "soon_title": 'Brevemente no Pro', "soon": ['📍 Missões em locais e eventos reais perto de ti', '🌦️ Missões que se adaptam ao tempo, com ideias para dias de chuva', '🏃 Passos e treinos do Apple Health ou Google Fit concluem missões de exercício automaticamente'],
         "eyebrow": "Life Quest Pro", "title": "Vai mais longe com o Pro",
         "f_country": "Missões personalizadas para o teu país: língua, moeda e estações do ano",
         "f_pillars": "As 7 áreas (plano gratuito: até 3)",
@@ -51,7 +51,7 @@ TEXT = {
         "error": "Não foi possível atualizar o teu plano. Tenta novamente.",
     },
     "fr": {
-        "soon_title": 'Bientôt avec Pro', "soon": ['📍 Des quêtes dans de vrais lieux et événements près de chez toi', '🌦️ Des quêtes adaptées à la météo, avec des idées pour les jours de pluie', "🏃 Les pas et entraînements d'Apple Santé ou Google Fit valident automatiquement les quêtes sportives", '📅 Des quêtes planifiées dans les créneaux libres de ton agenda', '🗣️ De la pratique orale avec un coach de langue IA', '📊 Un bilan hebdomadaire personnalisé'],
+        "soon_title": 'Bientôt avec Pro', "soon": ['📍 Des quêtes dans de vrais lieux et événements près de chez toi', '🌦️ Des quêtes adaptées à la météo, avec des idées pour les jours de pluie', "🏃 Les pas et entraînements d'Apple Santé ou Google Fit valident automatiquement les quêtes sportives"],
         "eyebrow": "Life Quest Pro", "title": "Va plus loin avec Pro",
         "f_country": "Des quêtes adaptées à ton pays : langue, monnaie et saisons",
         "f_pillars": "Les 7 domaines (offre gratuite : 3 maximum)",
@@ -66,7 +66,7 @@ TEXT = {
         "error": "Impossible de mettre à jour ton offre. Réessaie.",
     },
     "de": {
-        "soon_title": 'Bald mit Pro', "soon": ['📍 Quests an echten Orten und Events in deiner Nähe', '🌦️ Wetterabhängige Quests mit Ideen für Regentage', '🏃 Schritte und Workouts aus Apple Health oder Google Fit schließen Fitness-Quests automatisch ab', '📅 Quests in freien Zeitfenstern deines Kalenders', '🗣️ Sprechübungen mit einem KI-Sprachcoach', '📊 Ein persönlicher Wochenbericht'],
+        "soon_title": 'Bald mit Pro', "soon": ['📍 Quests an echten Orten und Events in deiner Nähe', '🌦️ Wetterabhängige Quests mit Ideen für Regentage', '🏃 Schritte und Workouts aus Apple Health oder Google Fit schließen Fitness-Quests automatisch ab'],
         "eyebrow": "Life Quest Pro", "title": "Mehr erreichen mit Pro",
         "f_country": "Quests passend zu deinem Land: Sprache, Währung und Jahreszeiten",
         "f_pillars": "Alle 7 Bereiche (kostenlos: bis zu 3)",
