@@ -57,7 +57,14 @@ window.addEventListener('message', event => {
   args = event.data.args;
   button.disabled = !args.enabled || busy;
   if (args.code) exchange(args.code);
-  send('streamlit:setFrameHeight', {height:110});
+  fit();
 });
 send('streamlit:componentReady', {apiVersion:1});
-send('streamlit:setFrameHeight', {height:110});
+// Size the iframe to its content (button + status line) instead of a fixed 110px.
+function fit() {
+  const body = document.body;
+  const height = body && body.getBoundingClientRect ? Math.ceil(body.getBoundingClientRect().height) : 0;
+  send('streamlit:setFrameHeight', {height: height || 110});
+}
+if (typeof ResizeObserver === 'function' && document.body) new ResizeObserver(fit).observe(document.body);
+fit();

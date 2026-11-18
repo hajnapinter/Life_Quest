@@ -30,6 +30,7 @@ For an empty project, run these in order in the Supabase SQL Editor:
 2. `supabase/ai-quests.sql`
 3. `supabase/five-quest-slots.sql`
 4. `supabase/social-play.sql`
+5. `supabase/protect-profile-points.sql` (stops users editing their own XP; **also run this once on the existing shared project**, it is new and safe to repeat)
 
 The separate squad, complete-challenge and weekly-leaderboard SQL files contain the original incremental functions; the latest social migration updates the leaderboard to include all reward sources.
 

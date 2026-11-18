@@ -15,79 +15,22 @@ from collections import Counter
 
 import streamlit as st
 from onboarding import render_onboarding
-from ai_quest_ui import render_home, render_pillar, prepare_initial_quests, fetch_quests
+from ai_quest_ui import render_home, render_pillar, render_recap, prepare_initial_quests, fetch_quests, quests_shown, category_name
 from onboarding import PILLARS
 from social_play import render_social
+from design import apply_styles, brand, hero, profile_card, splash
+from i18n import language_picker
+from places import city_picker, clear_city_picker
+from pro import pillar_limit, render_pro_card, is_pro
+from account import photo as account_photo, ring as account_ring, render_photo_setting, render_push_setting
 
 
-st.set_page_config(page_title="Life Quest", page_icon="🗺️", layout="centered")
-
-st.markdown(
-      """
-    <style>
-    .stApp {
-        background-color: #FFFFFF;
-        color: #243B2D;
-    }
-
-    h1, h2, h3 {
-        color: #245C43;
-    }
-
-    /* Forest green buttons */
-    div.stButton > button[kind="primary"],
-    div.stFormSubmitButton > button[kind="primary"] {
-        background-color: #245C43 !important;
-        color: #FFFFFF !important;
-        border: none;
-        border-radius: 12px;
-    }
-
-    div.stButton > button:hover,
-    div.stFormSubmitButton > button:hover {
-        border-color: #245C43;
-        color: #245C43;
-    }
-
-    /* Mint statistics cards */
-    div[data-testid="stMetric"] {
-        background-color: #DFF7EA;
-        padding: 14px;
-        border-radius: 14px;
-    }
-
-    /* Mint sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #DFF7EA;
-    }
-
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        color: #245C43;
-    }
-
-    /* Forest green progress bar */
-    div[data-testid="stProgress"] div[role="progressbar"] > div {
-        background-color: #245C43 !important;
-    }
-
-    /* Forest green selected statistics controls */
-    div[data-testid="stSegmentedControl"] button[aria-pressed="true"] {
-        background-color: #245C43 !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Mint table borders */
-    div[data-testid="stDataFrame"] {
-        border: 1px solid #C7EEDC;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.set_page_config(page_title="Life Quest", page_icon="🌱", layout="centered")
+apply_styles()
+if not st.session_state.get("splash_shown"):
+    # Animated loading screen on the first load of each browser session.
+    splash()
+    st.session_state.splash_shown = True
 
 def initialise_state() -> None:
     defaults = {
@@ -186,6 +129,13 @@ def email_cooldown(email: str, reserve: bool = False) -> int:
 
 
 def app_redirect_url() -> str | None:
+    # The deployment sets [app] url = "https://…" in its Secrets; local runs use auth_config.json.
+    try:
+        deployed = st.secrets.get("app", {}).get("url")
+    except (FileNotFoundError, AttributeError, KeyError):
+        deployed = None
+    if isinstance(deployed, str) and valid_app_url(deployed):
+        return deployed
     try:
         value = json.loads((Path(__file__).parent / "auth_config.json").read_text())["app_url"]
         return value if isinstance(value, str) and valid_app_url(value) else None
@@ -311,18 +261,21 @@ def navigate_auth(page: str) -> None:
 
 def render_auth() -> None:
     signing_up = st.query_params.get("auth") == "signup"
-    st.title("🌱 Create your Life Quest account" if signing_up else "🌱 Welcome to Life Quest")
-    st.subheader("Your adventure starts here" if signing_up else "Turn your everyday life into an adventure")
-    st.write("Build better habits, discover new experiences, and grow through small daily challenges. Complete quests, earn points, and level up with friends.")
+    brand()
+    st.title("Create your account" if signing_up else "Welcome back")
+    hero(
+        "Your adventure starts here" if signing_up else "A little better, every day",
+        "Turn everyday life into an adventure",
+        "Small daily quests, real progress, and friends to cheer you on.",
+    )
     render_google_login()
-    st.divider()
     st.caption("Or create an account with email" if signing_up else "Or log in with email")
     with st.form("signup_form" if signing_up else "login_form"):
         email = st.text_input("Email")
         password = st.text_input("Password", type="password",
                                  help="Use at least 8 characters." if signing_up else None)
         confirmation = st.text_input("Confirm password", type="password") if signing_up else None
-        submitted = st.form_submit_button("Create account" if signing_up else "Log in", type="primary")
+        submitted = st.form_submit_button("Create account" if signing_up else "Log in", type="primary", width="stretch")
     if submitted:
         if not valid_email(email) or not password:
             auth_notice("Enter a valid email address and your password.", "error")
@@ -393,10 +346,10 @@ def load_user_data() -> bool:
     return True
 
 
-def save_onboarding(nickname: str, location: str, categories: list[str], levels: dict) -> bool:
+def save_onboarding(nickname: str, location: str, categories: list[str], levels: dict, quests_shown: dict | None = None) -> bool:
     token = st.session_state.access_token
     answers = {"version": 1, "nickname": nickname, "categories": categories,
-               "levels": levels, "completed": True}
+               "levels": levels, "quests_shown": quests_shown or {}, "completed": True}
     user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers}}, token)
     if error:
         st.error("We couldn’t save your answers. " + error)
@@ -502,7 +455,7 @@ def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[in
 TRANSLATIONS = {
     "en": {
         "profile": "Your profile",
-        "home": "Home",
+        "home": "Home", "recap": "Recap",
         "squad": "Squad",
         "leaderboard": "Leaderboard",
         "settings": "Settings",
@@ -514,7 +467,7 @@ TRANSLATIONS = {
     },
     "pt": {
         "profile": "O teu perfil",
-        "home": "Início",
+        "home": "Início", "recap": "Resumo",
         "squad": "Equipa",
         "leaderboard": "Classificação",
         "settings": "Definições",
@@ -526,7 +479,7 @@ TRANSLATIONS = {
     },
     "fr": {
         "profile": "Ton profil",
-        "home": "Accueil",
+        "home": "Accueil", "recap": "Bilan",
         "squad": "Équipe",
         "leaderboard": "Classement",
         "settings": "Paramètres",
@@ -538,7 +491,7 @@ TRANSLATIONS = {
     },
     "de": {
         "profile": "Dein Profil",
-        "home": "Startseite",
+        "home": "Startseite", "recap": "Rückblick",
         "squad": "Team",
         "leaderboard": "Rangliste",
         "settings": "Einstellungen",
@@ -554,6 +507,115 @@ TRANSLATIONS = {
 def t(key):
     language = st.session_state.get("language", "en")
     return TRANSLATIONS.get(language, TRANSLATIONS["en"]).get(key, key)
+
+def update_profile(fields: dict) -> bool:
+    """PATCH the user's own profile row and mirror the change in session state."""
+    query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
+    _, error = api_request("PATCH", f"/rest/v1/profiles?{query}", fields, st.session_state.access_token)
+    if error:
+        return False
+    st.session_state.profile.update(fields)
+    return True
+
+
+def render_pillars_setting(lang: str) -> None:
+    """Add or remove pillars. Free: up to 3 (accounts that already had more keep them); Pro: all 7."""
+    labels = {
+        "en": ("Your pillars", "Save pillars", "Free plan: up to {n} pillars. Pro unlocks all 7.", "Pillars saved. New quests are being prepared.", "Keep at least one pillar.", "We couldn't save your pillars. Please try again."),
+        "pt": ("As tuas áreas", "Guardar áreas", "Plano gratuito: até {n} áreas. O Pro desbloqueia as 7.", "Áreas guardadas. Estamos a preparar novas missões.", "Mantém pelo menos uma área.", "Não foi possível guardar as áreas. Tenta novamente."),
+        "fr": ("Tes domaines", "Enregistrer", "Offre gratuite : {n} domaines maximum. Pro débloque les 7.", "Domaines enregistrés. De nouvelles quêtes se préparent.", "Garde au moins un domaine.", "Impossible d'enregistrer tes domaines. Réessaie."),
+        "de": ("Deine Bereiche", "Bereiche speichern", "Kostenlos: bis zu {n} Bereiche. Pro schaltet alle 7 frei.", "Bereiche gespeichert. Neue Quests werden vorbereitet.", "Behalte mindestens einen Bereich.", "Deine Bereiche konnten nicht gespeichert werden. Bitte versuche es erneut."),
+    }
+    title, save_label, limit_note, saved, need_one, failed = labels.get(lang, labels["en"])
+    if st.session_state.get("pillars_toast"):
+        st.toast(st.session_state.pop("pillars_toast"), icon="🌱")
+    st.subheader(title)
+    current = [c for c in st.session_state.profile.get("selected_categories", []) if c in PILLARS]
+    limit = pillar_limit(len(current))
+    chosen = st.multiselect(title, list(PILLARS), default=current, max_selections=limit, key="pillars_setting",
+                            format_func=lambda c: f"{PILLARS[c][0]} {category_name(c)}", label_visibility="collapsed")
+    if limit < len(PILLARS):
+        st.caption("✨ " + limit_note.format(n=limit))
+    if st.button(save_label, key="pillars_save", disabled=sorted(chosen) == sorted(current)):
+        if not chosen:
+            st.error(need_one)
+        elif update_profile({"selected_categories": chosen}):
+            st.session_state.pillars_toast = saved
+            st.rerun()
+        else:
+            st.error(failed)
+
+
+def render_city_setting(lang: str) -> None:
+    labels = {
+        "en": ("Change city", "Your city", "City saved.", "We couldn't save your city. Please try again.",
+               "Start typing your city, for example Lisbon", "No matching city found. Check the spelling.",
+               "City search is unavailable right now. Please try again later."),
+        "pt": ("Mudar cidade", "A tua cidade", "Cidade guardada.", "Não foi possível guardar a cidade. Tenta novamente.",
+               "Começa a escrever a tua cidade, por exemplo Lisboa", "Nenhuma cidade encontrada. Verifica a ortografia.",
+               "A pesquisa de cidades não está disponível agora. Tenta mais tarde."),
+        "fr": ("Changer de ville", "Ta ville", "Ville enregistrée.", "Impossible d'enregistrer ta ville. Réessaie.",
+               "Commence à écrire ta ville, par exemple Lisbonne", "Aucune ville trouvée. Vérifie l'orthographe.",
+               "La recherche de villes est indisponible pour le moment. Réessaie plus tard."),
+        "de": ("Stadt ändern", "Deine Stadt", "Stadt gespeichert.", "Deine Stadt konnte nicht gespeichert werden. Bitte versuche es erneut.",
+               "Gib deine Stadt ein, zum Beispiel Lissabon", "Keine passende Stadt gefunden. Prüfe die Schreibweise.",
+               "Die Städtesuche ist gerade nicht verfügbar. Bitte versuche es später erneut."),
+    }
+    title, field, saved, failed, placeholder, none_found, unavailable = labels.get(lang, labels["en"])
+    if st.session_state.get("city_toast"):
+        st.toast(st.session_state.pop("city_toast"), icon="📍")
+    with st.expander("📍 " + title):
+        place = city_picker("settings_city", "", label=field, placeholder=placeholder,
+                            none_found=none_found, unavailable=unavailable)
+        if place:
+            if update_profile({"location": place["label"]}):
+                clear_city_picker("settings_city")  # otherwise the same city is saved again on every rerun
+                st.session_state.city_toast = saved
+                st.rerun()
+            else:
+                st.error(failed)
+
+
+def render_quests_shown_setting(lang: str) -> None:
+    """Per pillar: how many of the five ready quests to show (saved with the onboarding answers)."""
+    labels = {
+        "en": ("Quests per pillar", "How many quests to show at once. A new one appears whenever you finish one.", "Saved.", "We couldn't save this. Please try again."),
+        "pt": ("Missões por área", "Quantas missões mostrar de cada vez. Aparece uma nova sempre que concluis uma.", "Guardado.", "Não foi possível guardar. Tenta novamente."),
+        "fr": ("Quêtes par domaine", "Combien de quêtes afficher à la fois. Une nouvelle apparaît à chaque quête terminée.", "Enregistré.", "Impossible d'enregistrer. Réessaie."),
+        "de": ("Quests pro Bereich", "Wie viele Quests gleichzeitig angezeigt werden. Nach jedem Abschluss erscheint eine neue.", "Gespeichert.", "Konnte nicht gespeichert werden. Bitte versuche es erneut."),
+    }
+    title, help_text, saved, failed = labels.get(lang, labels["en"])
+    if st.session_state.get("shown_toast"):
+        st.toast(st.session_state.pop("shown_toast"), icon="👀")
+    st.subheader(title)
+    st.caption(help_text)
+    categories = [c for c in st.session_state.profile.get("selected_categories", []) if c in PILLARS]
+    for category in categories:
+        current = quests_shown(category)
+        # One compact row per pillar: name on the left, 1-5 on the right.
+        name_col, pick_col = st.columns([1, 1], vertical_alignment="center")
+        name_col.markdown(f"**{PILLARS[category][0]} {category_name(category)}**")
+        with pick_col:
+            choice = st.segmented_control(
+                f"{PILLARS[category][0]} {category_name(category)}", [1, 2, 3, 4, 5],
+                default=current, key="shown_" + category, label_visibility="collapsed",
+            )
+        if choice is None or choice == current:
+            continue
+        answers = dict(st.session_state.user.get("user_metadata", {}).get("lifequest_onboarding", {}))
+        answers["quests_shown"] = {**(answers.get("quests_shown") or {}), category: int(choice)}
+        user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers}},
+                                  st.session_state.access_token)
+        if error:
+            st.error(failed)
+            return
+        if isinstance(user, dict) and user.get("id"):
+            st.session_state.user = user
+        else:
+            st.session_state.user.setdefault("user_metadata", {})["lifequest_onboarding"] = answers
+        st.session_state.shown_toast = saved
+        st.rerun()
+
 
 def render_settings() -> None:
     profile = st.session_state.profile
@@ -600,75 +662,67 @@ def render_settings() -> None:
 
     text = translations.get(lang, translations["en"])
 
+    st.markdown('<div class="lq-eyebrow">' + t("settings") + '</div>', unsafe_allow_html=True)
     st.title(text["profile"])
-    st.write(f"**{profile.get('display_name', 'Quest explorer')}**")
-    st.caption(
-        f"{profile.get('points', 0)} XP · "
-        f"{profile.get('location') or text['next']}"
-    )
-
-    st.divider()
-    st.subheader(text["notifications"])
-
-    reminders = st.toggle(
-        text["reminders"],
-        value=bool(profile.get("email_reminders", False))
-    )
-
-    if reminders != bool(profile.get("email_reminders", False)):
-        query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
-        _, error = api_request(
-            "PATCH",
-            f"/rest/v1/profiles?{query}",
-            {"email_reminders": reminders},
-            st.session_state.access_token
+    left, right = st.columns(2, gap="large")
+    with left, st.container(key="card_profile"):
+        profile_card(
+            profile.get('display_name', 'Quest explorer'),
+            ("✨ Pro · " if is_pro() else "") + f"🌱 {profile.get('points', 0)} XP · {profile.get('location') or text['next']}",
+            photo=account_photo(), ring=account_ring(),
+        )
+        render_photo_setting(api_request, lang)
+        render_city_setting(lang)
+        st.caption(text["privacy"] + " " + text["ai_privacy"])
+    with left, st.container(key="card_pillars"):
+        render_pillars_setting(lang)
+    with left, st.container(key="card_quests_shown"):
+        render_quests_shown_setting(lang)
+    with right, st.container(key="card_pro"):
+        render_pro_card(api_request, lang)
+    with right, st.container(key="card_notifications"):
+        st.subheader(text["notifications"])
+        reminders = st.toggle(
+            text["reminders"],
+            value=bool(profile.get("email_reminders", False))
         )
 
-        if error:
-            st.error(text["save_error"])
-        else:
-            profile["email_reminders"] = reminders
+        render_push_setting(api_request, lang)
 
-    st.caption(text["privacy"] + " " + text["ai_privacy"])
+        if reminders != bool(profile.get("email_reminders", False)):
+            query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
+            _, error = api_request(
+                "PATCH",
+                f"/rest/v1/profiles?{query}",
+                {"email_reminders": reminders},
+                st.session_state.access_token
+            )
 
-    if st.button(t("logout")):
-        st.session_state.clear()
-        st.rerun()
+            if error:
+                st.error(text["save_error"])
+            else:
+                profile["email_reminders"] = reminders
+        if st.button(t("logout"), width="stretch"):
+            st.session_state.clear()
+            st.rerun()
 
 
 def render_dashboard() -> None:
     profile = st.session_state.profile
-    col_profile, col_language = st.columns([3, 1])
+    col_profile, col_language = st.columns([3, 1], vertical_alignment="center")
 
     with col_profile:
-        st.write(f"👤 {profile.get('display_name', 'Quest explorer')}")
+        brand()
 
     with col_language:
-        languages = {
-            "🇬🇧 English": "en",
-            "🇵🇹 Português": "pt",
-            "🇫🇷 Français": "fr",
-            "🇩🇪 Deutsch": "de",
-        }
-
-        current_language = st.session_state.get("language", "en")
-
-        selected_language = st.selectbox(
-            "🌍",
-            options=list(languages),
-            index=list(languages.values()).index(current_language),
-            key="header_language",
-        )
-
-        if languages[selected_language] != current_language:
-            st.session_state.language = languages[selected_language]
-            st.rerun()
+        language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", *pillar_pages, "👥 Squad", "🏆 Leaderboard", "⚙️ Settings"]
+    pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚙️ Settings"]
     def nav_label(item):
         labels = {
             "🏠 Home": t("home"),
+            "📊 Recap": t("recap"),
             "👥 Squad": t("squad"),
             "🏆 Leaderboard": t("leaderboard"),
             "⚙️ Settings": t("settings"),
@@ -726,91 +780,19 @@ def render_dashboard() -> None:
         }.get(language, "Fitness")))
     if st.session_state.get("current_page") not in pages:
         st.session_state.current_page = "🏠 Home"
-    st.markdown("""
-    <style>
-    .stMainBlockContainer {max-width:900px;padding-top:5rem;padding-bottom:115px;}
-    .st-key-bottom_navigation [role="radiogroup"] {display:flex;flex-wrap:nowrap!important;
-       gap:10px;overflow-x:auto;scrollbar-width:thin;padding:3px 0;}
-    .st-key-bottom_navigation [role="radiogroup"] label {white-space:nowrap;border-radius:15px;
-       padding:9px 13px;margin:0;background:#f3f8f4;border:1px solid #e0ebe3;}
-    .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#dff2e6;border-color:#245c43;}
-    .st-key-bottom_navigation [data-testid="stRadioOption"]>div>div:first-child {display:none!important;}
-    .st-key-bottom_navigation [data-testid="stRadioOption"][data-selected="true"] {background:#dff2e6;border-color:#245c43;}
-    .st-key-bottom_navigation [data-testid="stRadioOption"]>div {gap:0!important;}
-    div[data-testid="stVerticalBlockBorderWrapper"] {border-radius:20px;}
-    div.stButton>button {border-radius:12px;min-height:42px;}
-    </style>""", unsafe_allow_html=True)
     with st.container(key="bottom_navigation"):
        page = st.radio("Explore Life Quest", pages, key="current_page", horizontal=True, label_visibility="collapsed", format_func=nav_label)
     if page == "🏠 Home":
         render_home(api_request)
     elif page in pillar_pages:
         render_pillar(api_request, pillar_pages[page])
+    elif page == "📊 Recap":
+        render_recap(api_request)
     elif page == "👥 Squad":
         render_squad()
     elif page == "⚙️ Settings":
         render_settings()
-    elif page == "🏆 Leaderboard":
-        st.title({
-            "en": "Weekly leaderboard",
-            "pt": "Classificação semanal",
-            "fr": "Classement hebdomadaire",
-            "de": "Wöchentliche Rangliste",
-        }.get(st.session_state.get("language", "en")))
 
-        st.caption({
-            "en": "XP earned since the start of this week",
-            "pt": "XP ganhos desde o início desta semana",
-            "fr": "XP gagnés depuis le début de cette semaine",
-            "de": "Seit Beginn dieser Woche verdiente XP",
-        }.get(st.session_state.get("language", "en")))
-
-        leaderboard, error = api_request(
-            "POST",
-            "/rest/v1/rpc/get_weekly_leaderboard",
-            {},
-            st.session_state.access_token
-        )
-
-        if error:
-            st.error({
-                "en": "The leaderboard could not be loaded. Please try again.",
-                "pt": "Não foi possível carregar a classificação. Tenta novamente.",
-                "fr": "Impossible de charger le classement. Réessaie.",
-                "de": "Die Rangliste konnte nicht geladen werden. Bitte versuche es erneut.",
-            }.get(st.session_state.get("language", "en")))
-
-        elif leaderboard:
-            lang = st.session_state.get("language", "en")
-            labels = {
-                "en": ["Rank", "Player", "XP", "Quests"],
-                "pt": ["Posição", "Jogador", "XP", "Missões"],
-                "fr": ["Rang", "Joueur", "XP", "Quêtes"],
-                "de": ["Rang", "Spieler", "XP", "Quests"],
-            }
-            headers = labels.get(lang, labels["en"])
-
-            st.dataframe(
-                [
-                    {
-                        headers[0]: i,
-                        headers[1]: row["display_name"],
-                        headers[2]: row["weekly_points"],
-                        headers[3]: row["quests_completed"],
-                    }
-                    for i, row in enumerate(leaderboard, 1)
-                ],
-                hide_index=True,
-                use_container_width=True
-            )
-        else:
-            st.info({
-                "en": "Complete a quest to appear on this week's leaderboard.",
-                "pt": "Conclui uma missão para aparecer na classificação desta semana.",
-                "fr": "Termine une quête pour apparaître dans le classement de cette semaine.",
-                "de": "Schließe eine Quest ab, um in der Rangliste dieser Woche zu erscheinen.",
-            }.get(st.session_state.get("language", "en")))
-        
 initialise_state()
 
 if supabase_config() is None:

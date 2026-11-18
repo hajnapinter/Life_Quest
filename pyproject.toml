@@ -2,12 +2,13 @@
 name = "life-quest"
 version = "0.1.0"
 description = "A personal development app where life goals become quests."
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "streamlit>=1.40.0",
+    "streamlit==1.67.0",
+    "pillow==13.0.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
+    "pytest==9.2.0",
 ]

@@ -120,3 +120,92 @@ def clean_title(title, target=None):
                                 ('steps','step'),('priorities','priority'),('improvements','improvement')]:
             title=re.sub(r'\b'+plural+r'\b',singular,title)
     return title
+
+
+# ---------- Adaptivity hint shown under a quest ----------
+
+def progress_hint(quest, rows):
+    """('up' | 'down', previous_target) when this quest's target changed since the last completion in its slot."""
+    target = quest.get('target')
+    if quest.get('focus') in EXPERIENCE_FOCUSES or not isinstance(target, int):
+        return None
+    previous = [q for q in rows
+                if q.get('status') == 'completed' and q.get('id') != quest.get('id')
+                and q.get('category') == quest.get('category') and q.get('slot') == quest.get('slot')
+                and isinstance(q.get('target'), int)]
+    if not previous:
+        return None
+    last = max(previous, key=lambda q: q.get('completed_at') or '')['target']
+    if target > last:
+        return ('up', last)
+    if target < last:
+        return ('down', last)
+    return None
+
+
+# ---------- Weekly recap and CSV export ----------
+
+def quest_xp(quest):
+    """XP a completed quest earned: shared challenges carry points, pillar quests 10 + 5 x difficulty."""
+    if quest.get('points') is not None:
+        return int(quest['points'])
+    return 10 + 5 * int(quest.get('difficulty') or 1)
+
+
+def _completed_day(quest):
+    value = quest.get('completed_at')
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace('Z', '+00:00')).date()
+
+
+def weekly_recap(rows, today=None):
+    """Summary of the current week (Monday to today) compared with the previous one."""
+    from datetime import timedelta
+    today = today or datetime.now(timezone.utc).date()
+    start = today - timedelta(days=today.weekday())
+    previous_start = start - timedelta(days=7)
+    done = [(q, _completed_day(q)) for q in rows if q.get('status') == 'completed']
+    week = [(q, d) for q, d in done if d and start <= d <= today]
+    last_week = [q for q, d in done if d and previous_start <= d < start]
+    per_pillar, per_day = {}, {}
+    for q, d in week:
+        per_pillar[q.get('category', '')] = per_pillar.get(q.get('category', ''), 0) + 1
+        per_day[d] = per_day.get(d, 0) + 1
+    best_day = max(per_day.items(), key=lambda item: (item[1], item[0])) if per_day else None
+    return {
+        'week_start': start,
+        'completed': len(week),
+        'xp': sum(quest_xp(q) for q, _ in week),
+        'previous_completed': len(last_week),
+        'delta': len(week) - len(last_week),
+        'active_days': len(per_day),
+        'per_pillar': dict(sorted(per_pillar.items(), key=lambda item: (-item[1], item[0]))),
+        'best_day': best_day,
+    }
+
+
+CSV_COLUMNS = ['completed_on', 'pillar', 'quest', 'xp', 'feedback']
+
+
+def _safe_cell(value):
+    """Stop spreadsheet apps from running a cell as a formula (CSV injection)."""
+    text = '' if value is None else str(value)
+    return "'" + text if text[:1] in ('=', '+', '-', '@', '\t', '\r') else text
+
+
+def completed_csv(rows):
+    """All completed quests, newest first, as CSV text."""
+    import csv
+    import io
+    finished = sorted([q for q in rows if q.get('status') == 'completed'],
+                      key=lambda q: q.get('completed_at') or '', reverse=True)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(CSV_COLUMNS)
+    for q in finished:
+        day = _completed_day(q)
+        writer.writerow([_safe_cell(day.isoformat() if day else ''), _safe_cell(q.get('category')),
+                         _safe_cell(clean_title(q.get('title', ''), q.get('target'))), quest_xp(q),
+                         _safe_cell(q.get('feedback') or '')])
+    return buffer.getvalue()
