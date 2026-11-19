@@ -73,6 +73,8 @@ Each quest whose target changed since the last time shows a small line such as "
 - **Credentials**: none in the repository (a test scans for them). `.streamlit/secrets.toml` is git-ignored.
 - **Access control**: Row Level Security on every table; users can only read and change their own rows. Anything that awards XP runs in `security definer` database functions that check `auth.uid()`; the app cannot just "add points".
 - **XP protection**: `supabase/protect-profile-points.sql` limits which profile columns users may write, so XP cannot be edited directly through the API.
+- **Security audit**: `docs/security-audit.md` lists every finding, its severity and fix. `supabase/security-hardening.sql` closes the database ones (squads only joinable with a code, daily XP cap, length limits).
+- **Errors and names**: database errors are replaced by friendly messages, and other users' names are shown as plain text (no Markdown links or images).
 - **Input validation**: email format, password ≥ 8 characters and matching, nickname ≤ 30, squad name 2–50, city search ≤ 80 characters, photo type and size (≤ 8 MB, re-encoded to 80×80 JPEG), and every AI answer is checked (`validate_batch`) before use.
 - **Output safety**: user text is HTML-escaped before it is shown in custom HTML, and CSV exports neutralise cells starting with `= + - @` so a spreadsheet never runs them as formulas (CSV injection).
 - **Dependencies**: three direct dependencies (`streamlit`, `pillow`, `pytest` for tests), pinned to exact versions in `pyproject.toml`/`uv.lock`/`requirements.txt`, and checked with `pip-audit` on every push.
@@ -95,9 +97,10 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 | `test_app_screens.py` | The real app starts; missing configuration message; login and sign-up reject bad input; Supabase unreachable |
 | `test_recap_and_text.py` | Weekly recap (week boundaries, XP, per pillar), CSV export (order, formula neutralising), adaptivity hint, and that all four languages have every text |
 | `test_security.py` | No committed credentials; secrets file ignored; XP not user-writable |
+| `test_workflows.py` + `fake_supabase.py` | **19 end-to-end workflows** on the real app against an in-memory Supabase: sign-up and onboarding, nickname required, free 3-pillar limit, wrong password, completing a quest (XP, refill, harder next target, hint shown), quests shown per pillar, recap, squads (create, join, wrong code, too-short name, two confirmations = 30 XP each), Settings (quests per pillar, add a pillar, Pro limits, city saved once), logout ends the session, Markdown in names shown as text |
 | `oauth.test.cjs` | PKCE, replayed or foreign messages, expired verifier, failed exchange |
 
-**Not covered automatically:** the SQL functions and RLS policies against a real database, the logged-in screens end to end, the visual design, and the quality of AI wording. These were checked by hand (see the demo checklist below).
+**Not covered automatically:** the real SQL functions and RLS policies (the fake follows their rules but is not Postgres), the visual design, the quality of AI wording, browser notifications and real emails. These were checked by hand (see the demo checklist below).
 
 ## 7. When something it depends on is unavailable
 

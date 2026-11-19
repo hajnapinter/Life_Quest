@@ -2,6 +2,7 @@
 import streamlit as st
 from ai_quest_ui import render_quest_styles
 from design import hero, member_chips, squad_ranking
+from auth_helpers import friendly_error, plain_markdown
 def tx(en, pt, fr, de):
     language = st.session_state.get("language", "en")
     translations = {
@@ -21,7 +22,7 @@ def rpc(api, name, payload=None):
 def act(api, name, payload, message):
     _,error=rpc(api,name,payload)
     if error:
-        st.error(error)
+        st.error(friendly_error(error))
     else:
         st.session_state.social_notice=message
         st.rerun()
@@ -75,7 +76,7 @@ def render_social(api):
 
         if error:
             st.session_state['team_check_' + pending] = False
-            st.error(error)
+            st.error(friendly_error(error))
         else:
             refreshed, refresh_error = rpc(api, 'get_social_state')
             if not refresh_error and isinstance(refreshed, dict):
@@ -152,7 +153,7 @@ def render_squads(api, state):
                 )
                 squad = options[chosen]
 
-                st.subheader(squad['name'])
+                st.subheader(plain_markdown(squad['name']))
                 member_chips([m['name'] for m in squad['members']])
                 render_squad_ranking(api, squad)
 
@@ -322,6 +323,7 @@ def render_competitions(api,state):
                 for friend in selected:
                     _,error=rpc(api,'create_friend_duel',{'friend_id':friend})
                     if error:errors.append(error)
+                errors=[friendly_error(e) for e in errors]
                 if errors:st.error(tx('Some invitations could not be created: ','Não foi possível criar alguns convites: ',
                                       'Certaines invitations n\'ont pas pu être créées : ','Einige Einladungen konnten nicht erstellt werden: ')+'; '.join(errors))
                 elif selected:
@@ -355,8 +357,10 @@ def render_competitions(api,state):
     for pair in state['duels']:
         mine=pair['creator']==uid
         friend_id=pair['opponent'] if mine else pair['creator']
-        friend_name=(pair.get('opponent_name') if mine else pair.get('creator_name')) or tx('a friend','um amigo','un ami','ein Freund')
-        friend_won=tx(f'{friend_name} won',f'{friend_name} ganhou',f'{friend_name} a gagné',f'{friend_name} hat gewonnen')
+        friend_raw=(pair.get('opponent_name') if mine else pair.get('creator_name')) or tx('a friend','um amigo','un ami','ein Freund')
+        friend_name=plain_markdown(friend_raw)   # shown as Markdown below; the table uses the raw name
+        won=lambda name: tx(f'{name} won',f'{name} ganhou',f'{name} a gagné',f'{name} hat gewonnen')
+        friend_won=won(friend_name)
         with st.container(key='card_duel_'+str(pair['id'])):
             st.subheader(tx('You vs ','Tu vs ','Toi contre ','Du gegen ')+friend_name)
             if pair['status']=='pending':
@@ -365,10 +369,10 @@ def render_competitions(api,state):
                                 'En attente de l\'acceptation de ton ami.','Warte darauf, dass dein Freund annimmt.'))
                     st.code(pair['code'],language=None)
                 else:
-                    st.write(tx(f"{pair['creator_name']} invited you to a daily competition.",
-                                f"{pair['creator_name']} convidou-te para uma competição diária.",
-                                f"{pair['creator_name']} t'a invité à un défi quotidien.",
-                                f"{pair['creator_name']} hat dich zu einem täglichen Wettbewerb eingeladen."))
+                    st.write(tx(f"{friend_name} invited you to a daily competition.",
+                                f"{friend_name} convidou-te para uma competição diária.",
+                                f"{friend_name} t'a invité à un défi quotidien.",
+                                f"{friend_name} hat dich zu einem täglichen Wettbewerb eingeladen."))
                     if st.button(tx('Accept invitation','Aceitar convite','Accepter l\'invitation','Einladung annehmen'),key='accept_'+pair['id']):
                         act(api,'join_friend_duel',{'invite':pair['code']},tx('Challenge accepted.','Desafio aceite.','Défi accepté.','Herausforderung angenommen.'))
                 continue
@@ -411,6 +415,6 @@ def render_competitions(api,state):
                     outcome=(tx('Open','Em aberto','En cours','Offen') if not d['settled']
                              else tx('No entries','Sem registos','Aucun résultat','Keine Einträge') if not scores
                              else tx('Tie','Empate','Égalité','Unentschieden') if d['winner'] is None
-                             else you_won if d['winner']==uid else friend_won)
+                             else you_won if d['winner']==uid else won(friend_raw))
                     table.append(dict(zip(columns,[d['day'],d['title'],d['unit'],str(scores.get(uid,'—')),str(scores.get(friend_id,'—')),outcome])))
                 st.dataframe(table,hide_index=True,width='stretch')

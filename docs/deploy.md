@@ -38,10 +38,14 @@ Supabase dashboard → **Authentication → URL Configuration**:
 
 This is needed for confirmation emails and Google sign-in to return to the deployed app.
 
-## 4. Protect XP (once)
+## 4. Security fixes (once)
 
-Supabase dashboard → **SQL Editor** → paste the contents of `supabase/protect-profile-points.sql` → **Run**.
-It is safe to run more than once.
+Supabase dashboard → **SQL Editor**, then run these two files, in this order (paste the contents → **Run**):
+1. `supabase/protect-profile-points.sql`
+2. `supabase/security-hardening.sql`
+
+Both are safe to run more than once. Then: **Authentication → Policies → Minimum password length: 8**.
+See `docs/security-audit.md` for what they fix.
 
 ## 5. Finish the README
 

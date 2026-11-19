@@ -43,3 +43,23 @@ def verified_oauth_user(token: str, request):
     if error or not isinstance(user, dict) or not user.get("id"):
         return None
     return user
+
+
+_INTERNAL_ERROR_MARKERS = ("violates", "permission denied", "relation ", "column ", "function ", "syntax",
+                           "jwt", "pgrst", "duplicate key", "constraint", "null value", "invalid input syntax")
+
+
+def friendly_error(message: str | None, fallback: str = "Something went wrong. Please try again.") -> str:
+    """Show messages our own database functions raise; hide technical database details."""
+    text = (message or "").strip()
+    if not text or len(text) > 160 or any(marker in text.lower() for marker in _INTERNAL_ERROR_MARKERS):
+        return fallback
+    return text
+
+
+_MARKDOWN_SPECIAL = set("\\`*_{}[]()#+-.!|<>~$")
+
+
+def plain_markdown(text: str | None) -> str:
+    """Escape Markdown so other users' names can't add links, images or formatting."""
+    return "".join("\\" + ch if ch in _MARKDOWN_SPECIAL else ch for ch in str(text or ""))

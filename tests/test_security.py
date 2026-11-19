@@ -48,3 +48,24 @@ def test_app_never_sends_points_in_profile_writes():
     for call in re.findall(r'api_request\(\s*"(?:POST|PATCH)",\s*f?"/rest/v1/profiles[^)]*\)', app, re.S):
         assert "points" not in call
     assert '"points"' not in app.split("def save_onboarding", 1)[1].split("def ", 1)[0]
+
+
+def test_hardening_migration_closes_the_audit_findings():
+    sql = (ROOT / "supabase" / "security-hardening.sql").read_text().lower()
+    assert sql.strip().startswith("--") and "begin;" in sql and sql.rstrip().endswith("commit;")
+    # H1: no direct inserts into squads / squad members
+    assert 'drop policy if exists "users can join squads as themselves" on public.squad_members' in sql
+    assert "revoke insert, update, delete on public.squads, public.squad_members from authenticated, anon" in sql
+    # H2: daily XP cap, upper bound on targets, old completion function closed
+    assert "done_today<20" in sql and "not between 1 and 20000" in sql
+    assert "revoke all on function public.finish_ai_quest(uuid,text,boolean) from public, anon, authenticated" in sql
+    # M1 / L1 / L2 / L4
+    assert "at most 5 squads" in sql
+    assert "revoke insert, update, delete on public.completed_challenges from authenticated, anon" in sql
+    assert "profiles_display_name_length" in sql and "profiles_known_pillars" in sql
+    assert "revoke all on function public.join_squad(text) from public, anon" in sql
+
+
+def test_uploads_are_capped_by_streamlit():
+    config = (ROOT / ".streamlit" / "config.toml").read_text()
+    assert re.search(r"^\s*maxUploadSize\s*=\s*8\b", config, re.M)

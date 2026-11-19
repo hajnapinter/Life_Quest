@@ -22,3 +22,6 @@ chartSequentialColors = ["#FFF1E6", "#FFE0CB", "#FFCBA6", "#FFB07A", "#FF9A5C", 
 
 [client]
 toolbarMode = "minimal"
+
+[server]
+maxUploadSize = 8   # MB; profile photos are re-encoded to 80x80 anyway

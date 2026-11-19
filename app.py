@@ -7,7 +7,7 @@ import hashlib
 import threading
 from pathlib import Path
 
-from auth_helpers import valid_email, retry_seconds, valid_app_url, auth_error_message, verified_oauth_user
+from auth_helpers import valid_email, retry_seconds, valid_app_url, auth_error_message, verified_oauth_user, friendly_error
 import streamlit.components.v1 as components
 
 from datetime import date, datetime, timedelta, timezone
@@ -304,21 +304,21 @@ def load_user_data() -> bool:
     profile_query = urlencode({"select": "*", "id": f"eq.{user_id}"})
     profiles, error = api_request("GET", f"/rest/v1/profiles?{profile_query}", access_token=token)
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return False
     st.session_state.profile = profiles[0] if profiles else None
 
     challenge_query = urlencode({"select": "*", "is_active": "eq.true", "order": "id"})
     challenges, error = api_request("GET", f"/rest/v1/challenges?{challenge_query}", access_token=token)
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return False
     st.session_state.challenges = challenges or []
 
     completed_query = urlencode({"select": "challenge_id,completed_at:created_at", "user_id": f"eq.{user_id}"})
     completed, error = api_request("GET", f"/rest/v1/completed_challenges?{completed_query}", access_token=token)
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return False
     st.session_state.legacy_completions = completed or []
     st.session_state.completed_challenges = {row["challenge_id"] for row in completed or []}
@@ -334,7 +334,7 @@ def load_user_data() -> bool:
         "POST", "/rest/v1/rpc/get_weekly_leaderboard", {}, access_token=token
     )
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return False
     st.session_state.leaderboard = leaderboard or []
 
@@ -352,7 +352,7 @@ def save_onboarding(nickname: str, location: str, categories: list[str], levels:
                "levels": levels, "quests_shown": quests_shown or {}, "completed": True}
     user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers}}, token)
     if error:
-        st.error("We couldn’t save your answers. " + error)
+        st.error(friendly_error(None, "We couldn’t save your answers. Please try again."))
         return False
     if isinstance(user, dict) and user.get("id"):
         st.session_state.user = user
@@ -360,7 +360,7 @@ def save_onboarding(nickname: str, location: str, categories: list[str], levels:
                "location": location.strip(), "selected_categories": categories}
     data, error = api_request("POST", "/rest/v1/profiles", profile, token)
     if error:
-        st.error("We couldn’t save your profile. " + error)
+        st.error(friendly_error(None, "We couldn’t save your profile. Please try again."))
         return False
     st.session_state.profile = data[0] if isinstance(data, list) and data else profile
     notice = prepare_initial_quests(api_request)
@@ -381,7 +381,7 @@ def complete_challenge(challenge_id: int) -> None:
         st.session_state.access_token,
     )
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return
     if isinstance(data, list) and data:
         st.session_state.profile["points"] = data[0]["new_points"]
@@ -397,7 +397,7 @@ def create_squad(name: str) -> None:
         st.session_state.access_token,
     )
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return
     if isinstance(data, list) and data:
         st.session_state.squad_invite_code = data[0]["invite_code"]
@@ -413,7 +413,7 @@ def join_squad(invite_code: str) -> None:
         st.session_state.access_token,
     )
     if error:
-        st.error(error)
+        st.error(friendly_error(error, "We couldn't load your data. Please refresh the page."))
         return
     load_user_data()
     st.rerun()
@@ -703,6 +703,8 @@ def render_settings() -> None:
             else:
                 profile["email_reminders"] = reminders
         if st.button(t("logout"), width="stretch"):
+            # Revoke the refresh token on Supabase too, not just in this browser session.
+            api_request("POST", "/auth/v1/logout", {}, st.session_state.access_token)
             st.session_state.clear()
             st.rerun()
 

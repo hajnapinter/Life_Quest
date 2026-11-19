@@ -211,3 +211,33 @@ def test_avatar_escapes_quotes_in_photo_urls():
 def test_initials():
     assert design.initials("Ana Luiza Costa") == "AL"
     assert design.initials("") == "?"
+
+
+# ---------- friendly errors and Markdown escaping (auth_helpers.py) ----------
+
+from auth_helpers import friendly_error, plain_markdown
+
+
+@pytest.mark.parametrize("message", [
+    'new row violates row-level security policy for table "squad_members"',
+    "permission denied for table profiles",
+    'duplicate key value violates unique constraint "ai_quests_pkey"',
+    "JWT expired", "", None, "x" * 200,
+])
+def test_technical_database_errors_are_hidden(message):
+    assert friendly_error(message, "Please try again.") == "Please try again."
+
+
+def test_our_own_messages_are_shown():
+    assert friendly_error("Squad not found") == "Squad not found"
+    assert friendly_error("You can create at most 5 squads.") == "You can create at most 5 squads."
+
+
+@pytest.mark.parametrize("name,shown", [
+    ("Ana", "Ana"),
+    ("![x](https://evil/p.png)", "\\!\\[x\\]\\(https://evil/p\\.png\\)"),
+    ("**bold** _it_", "\\*\\*bold\\*\\* \\_it\\_"),
+    (None, ""),
+])
+def test_plain_markdown_escapes_formatting(name, shown):
+    assert plain_markdown(name) == shown

@@ -48,6 +48,7 @@ Without an AI key it still works: quests then come from the built-in habit libra
 
 See **[docs/architecture.md](docs/architecture.md)**: where the data is stored, security, what the tests
 cover, what happens when an external service is down, known limits, and a demo checklist.
+Preparing the repository walkthrough: [docs/walkthrough.md](docs/walkthrough.md). Security review: [docs/security-audit.md](docs/security-audit.md).
 The visual design rules are in [docs/design.md](docs/design.md).
 
 ## Tech stack
