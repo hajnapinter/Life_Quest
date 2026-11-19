@@ -129,3 +129,16 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 6. Settings: change quests per pillar, search a city, upload a photo, subscribe to Pro (yearly), pick an avatar ring.
 7. Show invalid input: wrong email on login, short password on sign-up.
 8. Show the green "Tests" check on GitHub.
+
+## Recent authentication and testing improvements
+
+- Google OAuth uses PKCE and passes session tokens to the Streamlit application.
+- The application stores refresh tokens and attempts token renewal when a session approaches expiry.
+- API errors are converted to user-friendly messages without exposing raw database details.
+- `tests/test_token_refresh.py` covers token rotation and refresh failures.
+- `tests/test_api_errors.py` covers malformed responses and safe error messages.
+- The latest local Python test run passed 178 tests.
+
+### Security verification still required
+
+The SQL files document the intended Row Level Security policies and database permissions. Before any public release, verify that those policies, grants, and security-definer functions are correctly configured in the actual Supabase project. Passing local tests does not establish that the live database is secure.

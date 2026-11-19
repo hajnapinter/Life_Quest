@@ -53,6 +53,7 @@ TRANSLATIONS = {
 
 
 def t(key):
+    """Return translated text for the selected language, falling back to English."""
     language = st.session_state.get("language", "en")
     return TRANSLATIONS.get(
         language, TRANSLATIONS["en"]
@@ -67,6 +68,54 @@ LANGUAGES = {
     "🇩🇪 Deutsch": "de",
 }
 
+
+
+PILLAR_TRANSLATIONS = {
+    "Finance": {
+        "en": "Finance", "pt": "Finanças",
+        "fr": "Finances", "de": "Finanzen",
+    },
+    "Adventure": {
+        "en": "Adventure", "pt": "Aventura",
+        "fr": "Aventure", "de": "Abenteuer",
+    },
+    "Social": {
+        "en": "Social", "pt": "Vida Social",
+        "fr": "Vie sociale", "de": "Soziales",
+    },
+    "Personal Growth": {
+        "en": "Personal Growth", "pt": "Desenvolvimento Pessoal",
+        "fr": "Développement personnel", "de": "Persönliche Entwicklung",
+    },
+    "Languages": {
+        "en": "Languages", "pt": "Idiomas",
+        "fr": "Langues", "de": "Sprachen",
+    },
+    "Health": {
+        "en": "Health", "pt": "Saúde",
+        "fr": "Santé", "de": "Gesundheit",
+    },
+    "Fitness": {
+        "en": "Fitness", "pt": "Exercício",
+        "fr": "Sport", "de": "Fitness",
+    },
+}
+
+
+def translate_pillar_label(item: str, language: str | None = None) -> str:
+    """Translate a pillar navigation label while preserving its emoji prefix."""
+    if language is None:
+        language = st.session_state.get("language", "en")
+
+    for category, translations in PILLAR_TRANSLATIONS.items():
+        if category in item:
+            return item.replace(
+                category,
+                translations.get(language, category),
+                1,
+            )
+
+    return item
 
 def language_picker(key: str) -> None:
     """Compact language selector; changing it re-runs the page in the new language."""

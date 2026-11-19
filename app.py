@@ -19,7 +19,7 @@ from ai_quest_ui import render_home, render_pillar, render_recap, prepare_initia
 from onboarding import PILLARS
 from social_play import render_social
 from design import apply_styles, brand, hero, profile_card, splash
-from i18n import language_picker
+from i18n import language_picker, translate_pillar_label
 from places import city_picker, clear_city_picker
 from pro import pillar_limit, render_pro_card, is_pro
 from account import photo as account_photo, ring as account_ring, render_photo_setting, render_push_setting
@@ -33,8 +33,11 @@ if not st.session_state.get("splash_shown"):
     st.session_state.splash_shown = True
 
 def initialise_state() -> None:
+    """Set missing Streamlit session defaults without overwriting existing values."""
     defaults = {
         "access_token": None,
+        "refresh_token": None,
+        "token_expires_at": None,
         "user": None,
         "profile": None,
         "challenges": [],
@@ -55,6 +58,7 @@ def initialise_state() -> None:
 
 
 def supabase_config() -> tuple[str, str] | None:
+    """Read Supabase credentials from Streamlit Secrets, or return None if unavailable."""
     try:
         config = st.secrets["supabase"]
         url = str(config["url"]).strip()
@@ -73,6 +77,7 @@ def api_request(
     payload: dict | None = None,
     access_token: str | None = None,
 ) -> tuple[object | None, str | None]:
+    """Send a Supabase API request and return (response data, error message)."""
     config = supabase_config()
     if config is None:
         return None, "Supabase secrets are not configured."
@@ -89,32 +94,78 @@ def api_request(
             response_body = response.read().decode("utf-8")
             return (json.loads(response_body) if response_body else None), None
     except HTTPError as error:
-        message = error.read().decode("utf-8")
+        details = {}
         try:
-            details = json.loads(message)
-            message = details.get("msg") or details.get("message") or details.get("error_description") or message
-        except json.JSONDecodeError:
+            parsed = json.loads(error.read().decode("utf-8"))
+            if isinstance(parsed, dict):
+                details = parsed
+        except (UnicodeDecodeError, json.JSONDecodeError):
             pass
+
         if path.startswith("/auth/"):
-            code = details.get("error_code", details.get("code", "")) if isinstance(locals().get("details"), dict) else ""
-            message = auth_error_message(code, error.code)
-        return None, message
+            code = details.get("error_code") or details.get("code") or ""
+            return None, auth_error_message(code, error.code)
+
+        if (
+            path == "/rest/v1/rpc/join_squad"
+            and error.code == 400
+            and (details.get("msg") or details.get("message")) == "That invite code is not valid."
+        ):
+            return None, "That invite code is not valid."
+
+        return None, "The Supabase request could not be completed. Please try again."
     except (URLError, TimeoutError):
         return None, "The Supabase service could not be reached. Check your internet connection."
 
 
+
+def refresh_access_token() -> bool:
+    """Refresh the Supabase session and store the rotated tokens."""
+    refresh_token = st.session_state.get("refresh_token")
+    if not isinstance(refresh_token, str) or not refresh_token:
+        return False
+
+    data, error = api_request(
+        "POST",
+        "/auth/v1/token?grant_type=refresh_token",
+        {"refresh_token": refresh_token},
+    )
+    if error or not isinstance(data, dict):
+        return False
+
+    access_token = data.get("access_token")
+    new_refresh_token = data.get("refresh_token")
+    if not isinstance(access_token, str) or not access_token:
+        return False
+    if not isinstance(new_refresh_token, str) or not new_refresh_token:
+        return False
+
+    st.session_state.access_token = access_token
+    st.session_state.refresh_token = new_refresh_token
+    expires_in = data.get("expires_in")
+    st.session_state.token_expires_at = (
+        time.time() + expires_in
+        if isinstance(expires_in, (int, float)) and expires_in > 0
+        else None
+    )
+    return True
+
+
 def auth_notice(message: str, kind: str = "info") -> None:
+    """Store an authentication notice for display in the UI."""
     st.session_state.auth_message = message
     st.session_state.auth_message_kind = kind
 
 
 @st.cache_resource
 def email_attempts():
+    """Return the shared email cooldown store and its lock."""
     # Shared across browser sessions on this server; Supabase enforces global limits.
     return {}, threading.Lock()
 
 
 def email_cooldown(email: str, reserve: bool = False) -> int:
+    """Check or reserve the cooldown for confirmation email requests."""
     attempts, lock = email_attempts()
     key = hashlib.sha256(email.strip().lower().encode()).hexdigest()
     now = time.time()
@@ -129,6 +180,7 @@ def email_cooldown(email: str, reserve: bool = False) -> int:
 
 
 def app_redirect_url() -> str | None:
+    """Return a validated app redirect URL from the available configuration."""
     # The deployment sets [app] url = "https://…" in its Secrets; local runs use auth_config.json.
     try:
         deployed = st.secrets.get("app", {}).get("url")
@@ -144,11 +196,13 @@ def app_redirect_url() -> str | None:
 
 
 def confirmation_path(endpoint: str) -> str:
+    """Append the configured redirect URL to an authentication endpoint."""
     redirect = app_redirect_url()
     return endpoint + ("?" + urlencode({"redirect_to": redirect}) if redirect else "")
 
 
 def authenticate(email: str, password: str, sign_up: bool) -> None:
+    """Handle email sign-up or sign-in and update authentication state."""
     email = email.strip()
     if sign_up:
         remaining = email_cooldown(email, reserve=True)
@@ -165,6 +219,13 @@ def authenticate(email: str, password: str, sign_up: bool) -> None:
         return
     if isinstance(data, dict) and data.get("access_token") and data.get("user"):
         st.session_state.access_token = data["access_token"]
+        st.session_state.refresh_token = data.get("refresh_token")
+        expires_in = data.get("expires_in")
+        st.session_state.token_expires_at = (
+            time.time() + expires_in
+            if isinstance(expires_in, (int, float)) and expires_in > 0
+            else None
+        )
         st.session_state.user = data["user"]
         st.session_state.profile = None
         st.session_state.auth_message = None
@@ -176,6 +237,7 @@ def authenticate(email: str, password: str, sign_up: bool) -> None:
 
 
 def resend_confirmation(email: str) -> None:
+    """Request another confirmation email after validating the address and cooldown."""
     email = email.strip()
     if not valid_email(email):
         auth_notice("Enter a valid email address to request a confirmation.", "error")
@@ -193,6 +255,7 @@ def resend_confirmation(email: str) -> None:
 
 @st.fragment(run_every="1s")
 def render_confirmation_help() -> None:
+    """Display the confirmation email resend controls and cooldown."""
     with st.expander("Didn't receive a confirmation email?", expanded=bool(st.session_state.confirmation_email)):
         email = st.text_input("Confirmation email address", key="confirmation_email")
         remaining = email_cooldown(email) if valid_email(email) else 0
@@ -208,11 +271,13 @@ _google_component = components.declare_component("lifequest_google", path=str(Pa
 
 @st.cache_data(ttl=60, show_spinner=False)
 def google_available(base_url: str) -> bool:
+    """Check whether Google sign-in is enabled in Supabase Auth settings."""
     settings, error = api_request("GET", "/auth/v1/settings")
     return not error and isinstance(settings, dict) and settings.get("external", {}).get("google") is True
 
 
 def render_google_login() -> None:
+    """Handle the Google OAuth UI, response, and verified user session."""
     config = supabase_config()
     redirect = app_redirect_url()
     code = st.query_params.get("code")
@@ -247,6 +312,13 @@ def render_google_login() -> None:
         auth_notice("Google sign-in could not be verified. Please try again.", "error")
         return
     st.session_state.access_token = token
+    st.session_state.refresh_token = result.get("refresh_token")
+    expires_in = result.get("expires_in")
+    st.session_state.token_expires_at = (
+        time.time() + expires_in
+        if isinstance(expires_in, (int, float)) and expires_in > 0
+        else None
+    )
     st.session_state.user = user
     st.session_state.profile = None
     st.session_state.auth_message = None
@@ -254,12 +326,14 @@ def render_google_login() -> None:
 
 
 def navigate_auth(page: str) -> None:
+    """Switch authentication pages and rerun the Streamlit app."""
     st.query_params["auth"] = page
     st.session_state.auth_message = None
     st.rerun()
 
 
 def render_auth() -> None:
+    """Display and process the email authentication form."""
     signing_up = st.query_params.get("auth") == "signup"
     brand()
     st.title("Create your account" if signing_up else "Welcome back")
@@ -299,6 +373,7 @@ def render_auth() -> None:
 
 
 def load_user_data() -> bool:
+    """Load user data into session state and report required request failures."""
     token = st.session_state.access_token
     user_id = st.session_state.user["id"]
     profile_query = urlencode({"select": "*", "id": f"eq.{user_id}"})
@@ -347,6 +422,10 @@ def load_user_data() -> bool:
 
 
 def save_onboarding(nickname: str, location: str, categories: list[str], levels: dict, quests_shown: dict | None = None) -> bool:
+    """Save onboarding answers and profile, then prepare initial quests.
+
+    Return True when both saves succeed, or False if either save fails.
+    """
     token = st.session_state.access_token
     answers = {"version": 1, "nickname": nickname, "categories": categories,
                "levels": levels, "quests_shown": quests_shown or {}, "completed": True}
@@ -370,10 +449,12 @@ def save_onboarding(nickname: str, location: str, categories: list[str], levels:
 
 
 def render_profile_setup() -> None:
+    """Display the onboarding interface with its save callback."""
     render_onboarding(save_onboarding)
 
 
 def complete_challenge(challenge_id: int) -> None:
+    """Record a completed challenge and update local session state."""
     data, error = api_request(
         "POST",
         "/rest/v1/rpc/complete_challenge",
@@ -390,6 +471,7 @@ def complete_challenge(challenge_id: int) -> None:
 
 
 def create_squad(name: str) -> None:
+    """Create a squad and refresh the current user data."""
     data, error = api_request(
         "POST",
         "/rest/v1/rpc/create_squad",
@@ -406,6 +488,7 @@ def create_squad(name: str) -> None:
 
 
 def join_squad(invite_code: str) -> None:
+    """Join a squad using an invite code and refresh user data."""
     data, error = api_request(
         "POST",
         "/rest/v1/rpc/join_squad",
@@ -420,10 +503,12 @@ def join_squad(invite_code: str) -> None:
 
 
 def render_squad() -> None:
+    """Display the squad and social interface."""
     render_social(api_request)
 
 
 def calculate_statistics(completion_dates: list[str]) -> tuple[int, int, list[int]]:
+    """Return total completions, current daily streak, and seven daily counts."""
     days = []
 
     for value in completion_dates:
@@ -505,6 +590,7 @@ TRANSLATIONS = {
 
 
 def t(key):
+    """Translate a key using the selected language, falling back to the key."""
     language = st.session_state.get("language", "en")
     return TRANSLATIONS.get(language, TRANSLATIONS["en"]).get(key, key)
 
@@ -547,6 +633,7 @@ def render_pillars_setting(lang: str) -> None:
 
 
 def render_city_setting(lang: str) -> None:
+    """Display the localized city selection and update controls."""
     labels = {
         "en": ("Change city", "Your city", "City saved.", "We couldn't save your city. Please try again.",
                "Start typing your city, for example Lisbon", "No matching city found. Check the spelling.",
@@ -618,6 +705,7 @@ def render_quests_shown_setting(lang: str) -> None:
 
 
 def render_settings() -> None:
+    """Display profile, notification, and application settings."""
     profile = st.session_state.profile
     lang = st.session_state.get("language", "en")
 
@@ -710,6 +798,7 @@ def render_settings() -> None:
 
 
 def render_dashboard() -> None:
+    """Display the main dashboard and page navigation."""
     profile = st.session_state.profile
     col_profile, col_language = st.columns([3, 1], vertical_alignment="center")
 
@@ -722,6 +811,7 @@ def render_dashboard() -> None:
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
     pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚙️ Settings"]
     def nav_label(item):
+        """Translate navigation labels using one shared translation dictionary."""
         labels = {
             "🏠 Home": t("home"),
             "📊 Recap": t("recap"),
@@ -731,55 +821,9 @@ def render_dashboard() -> None:
         }
 
         language = st.session_state.get("language", "en")
-        if "Finance" in item:
-            return item.replace("Finance", {
-                "en": "Finance",
-                "pt": "Finanças",
-                "fr": "Finances",
-                "de": "Finanzen",
-            }.get(language, "Finance"))
-        if "Adventure" in item:
-            return item.replace("Adventure", {
-                "en": "Adventure",
-                "pt": "Aventura",
-                "fr": "Aventure",
-                "de": "Abenteuer",
-            }.get(language, "Adventure"))
-        if "Social" in item:
-            return item.replace("Social", {
-                "en": "Social",
-                "pt": "Vida Social",
-                "fr": "Vie sociale",
-                "de": "Soziales",
-            }.get(language, "Social"))
-        if "Personal Growth" in item:
-            return item.replace("Personal Growth", {
-                "en": "Personal Growth",
-                "pt": "Desenvolvimento Pessoal",
-                "fr": "Développement personnel",
-                "de": "Persönliche Entwicklung",
-            }.get(language, "Personal Growth"))
-        if "Languages" in item:
-            return item.replace("Languages", {
-                "en": "Languages",
-                "pt": "Idiomas",
-                "fr": "Langues",
-                "de": "Sprachen",
-            }.get(language, "Languages"))
-        if "Health" in item:
-            return item.replace("Health", {
-                "en": "Health",
-                "pt": "Saúde",
-                "fr": "Santé",
-                "de": "Gesundheit",
-            }.get(language, "Health"))
 
-        return labels.get(item, item.replace("Fitness", {
-            "en": "Fitness",
-            "pt": "Exercício",
-            "fr": "Sport",
-            "de": "Fitness",
-        }.get(language, "Fitness")))
+        return labels.get(item, translate_pillar_label(item, language))
+
     if st.session_state.get("current_page") not in pages:
         st.session_state.current_page = "🏠 Home"
     with st.container(key="bottom_navigation"):
@@ -806,6 +850,27 @@ if supabase_config() is None:
         "automatically."
     )
     st.stop()
+
+
+if st.session_state.access_token:
+    expires_at = st.session_state.get("token_expires_at")
+
+    if (
+        isinstance(expires_at, (int, float))
+        and time.time() >= expires_at - 60
+        and not refresh_access_token()
+        and time.time() >= expires_at
+    ):
+        st.session_state.access_token = None
+        st.session_state.refresh_token = None
+        st.session_state.token_expires_at = None
+        st.session_state.user = None
+        st.session_state.profile = None
+        auth_notice(
+            "Your session has expired. Please sign in again.",
+            "warning",
+        )
+
 
 if not st.session_state.access_token:
     render_auth()

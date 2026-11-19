@@ -158,3 +158,21 @@ See [docs/team-setup.md](docs/team-setup.md) for the exact local start command,
 private configuration, database migration order and validation checks. No server
 credentials are included in the repository. The local app URL is
 `http://127.0.0.1:8502/`; it is not a publicly hosted deployment.
+
+### Alternative: Python virtual environment
+
+Use Python 3.11 or newer. Create and activate a virtual environment, then install dependencies:
+
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -r requirements.txt
+
+Start the app privately:
+
+    python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8502
+
+Run tests:
+
+    python -m pytest -q
+
+Use the Supabase secrets setup described above. This does not publish the app.

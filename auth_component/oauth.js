@@ -24,7 +24,7 @@ async function exchange(code) {
     if (!response.ok || !session.access_token) throw new Error('exchange_failed');
     localStorage.removeItem(storageKey());
     // Tokens are sent through the component channel, never in a URL or localStorage.
-    result({access_token: session.access_token, code});
+    result({access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, code});
     status.textContent = 'Signed in. Loading your quests…';
   } catch (_) {
     localStorage.removeItem(storageKey());
