@@ -290,6 +290,7 @@ def render_squads(api, state):
 
 def render_competitions(api,state):
     uid=st.session_state.user['id']
+
     st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
                     'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
     st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
@@ -310,6 +311,7 @@ def render_competitions(api,state):
                       'Les jours et semaines terminés sont calculés dès qu\'un des joueurs ouvre cette page. Les résultats précédents restent dans ton historique.',
                       'Abgeschlossene Tage und Wochen werden ausgewertet, sobald einer der Spieler diese Seite öffnet. Frühere Ergebnisse bleiben in deinem Verlauf.'))
     with st.expander(tx('Challenge a friend','Desafiar um amigo','Défier un ami','Freund herausfordern'),expanded=not state['duels']):
+
         friends={f['id']:f['name'] for f in state['friends']}
         if friends:
             with st.form('challenge_squadmates'):
@@ -332,6 +334,7 @@ def render_competitions(api,state):
                                                       'Invitations créées. Chaque ami peut accepter sur sa page 1 contre 1.',
                                                       'Einladungen erstellt. Jeder Freund kann sie auf seiner 1-gegen-1-Seite annehmen.')
                     st.rerun()
+
                 else:st.info(tx('Select at least one friend.','Seleciona pelo menos um amigo.','Sélectionne au moins un ami.','Wähle mindestens einen Freund aus.'))
         st.write(tx('For a friend outside your squad, create an invitation and share its code yourself.',
                     'Para um amigo fora da tua equipa, cria um convite e partilha o código.',
@@ -375,15 +378,18 @@ def render_competitions(api,state):
                                 f"{friend_name} hat dich zu einem täglichen Wettbewerb eingeladen."))
                     if st.button(tx('Accept invitation','Aceitar convite','Accepter l\'invitation','Einladung annehmen'),key='accept_'+pair['id']):
                         act(api,'join_friend_duel',{'invite':pair['code']},tx('Challenge accepted.','Desafio aceite.','Défi accepté.','Herausforderung angenommen.'))
+
                 continue
             days=pair['days']
             current=next((d for d in days if d['day']==state['today']),None)
             week_days=[d for d in days if d['day']>=state['week_start'] and d['settled']]
+
             a,b=st.container(key='stat_row_duel_'+str(pair['id'])).columns(2)
             a.metric(tx('Your wins this week','As tuas vitórias esta semana','Tes victoires cette semaine','Deine Siege diese Woche'),
                      sum(d['winner']==uid for d in week_days))
             b.metric(tx(f'{friend_name}’s wins',f'Vitórias de {friend_name}',f'Victoires de {friend_name}',f'Siege von {friend_name}'),
                      sum(d['winner']==friend_id for d in week_days))
+
             if current:
                 scores={s['user_id']:s['value'] for s in current['scores']}
                 st.markdown('**'+current['title']+'**')
@@ -392,6 +398,7 @@ def render_competitions(api,state):
                 st.write(tx('Your result: ','O teu resultado: ','Ton résultat : ','Dein Ergebnis: ')+'**'+str(scores.get(uid,not_submitted))+'** · '
                          +friend_name+': **'+str(scores.get(friend_id,not_submitted))+'**')
                 with st.form('score_'+current['id']):
+
                     value=st.number_input(tx('Your total','O teu total','Ton total','Deine Summe')+' ('+current['unit']+')',
                                           min_value=0,max_value=current['max'],value=scores.get(uid,0),step=1)
                     submitted=st.form_submit_button(tx('Save my result','Guardar o meu resultado','Enregistrer mon résultat','Mein Ergebnis speichern'),type='primary')
@@ -400,6 +407,7 @@ def render_competitions(api,state):
                                     'O teu resultado foi guardado. Podes atualizá-lo até ao prazo.',
                                     'Ton résultat est enregistré. Tu peux le modifier avant la fin du délai.',
                                     'Dein Ergebnis ist gespeichert. Du kannst es bis zur Frist ändern.'))
+
             if pair['weeks']:
                 st.markdown('**'+tx('Weekly results','Resultados semanais','Résultats de la semaine','Wochenergebnisse')+'**')
                 for week in pair['weeks']:

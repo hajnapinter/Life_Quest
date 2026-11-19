@@ -130,8 +130,10 @@ def replace_quest(api, quest, rows, rating='just_right', skip=False):
 
 
 def render_quest_styles():
+
     """Kept for older callers; styles now come from design.apply_styles()."""
     return None
+
 
 
 def queue_completion(quest_id):
@@ -206,7 +208,9 @@ def render_quest_cards(api, rows, category, limit=5):
 def load_board(api, categories):
     rows,error=fetch_quests(api)
     if error:
+
         st.error(_tx('Your quests could not be loaded. Please refresh to reconnect.','Não foi possível carregar as tuas missões. Atualiza a página para voltar a ligar.','Impossible de charger tes quêtes. Actualise la page pour te reconnecter.','Deine Quests konnten nicht geladen werden. Lade die Seite neu, um dich erneut zu verbinden.'))
+
         return None
     rows=process_completions(api,rows)
     if rows is None:
@@ -350,6 +354,7 @@ def render_pillar(api, category):
                         "de": "Dein aktueller Schritt",
                             }.get(st.session_state.get("language", "en"), "Your current step")
 
+
                     st.write(f'**{step_label}:** {plan["title"]}')
                     habit_message = {
             "en": f"{len(completed)} completed in this habit track. Each completion unlocks the next step.",
@@ -357,6 +362,7 @@ def render_pillar(api, category):
             "fr": f"{len(completed)} quêtes terminées dans cette habitude. Chaque réussite débloque l'étape suivante.",
             "de": f"{len(completed)} Quests in diesem Gewohnheitsbereich abgeschlossen. Jeder Abschluss schaltet den nächsten Schritt frei.",
         }.get(st.session_state.get("language", "en"))
+
 
                     st.caption(habit_message)
                     if plan['metric'] and completed and completed[-1].get('target'):
