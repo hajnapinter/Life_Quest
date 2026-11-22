@@ -54,6 +54,6 @@ For a deployed app, add its secrets to the deployment settings, configure its UR
 uv run pytest
 ```
 
-Current suite: 11 tests passed. Additional UI checks covered checkbox completion, failed-save recovery, rapid checks and preserved statistics. Transactional database checks covered replacements, duplicate-XP protection, squad confirmation, pair-specific scores, deadline enforcement and weekly rewards. All database verification fixtures were rolled back.
+Current committed Python suite: 178 tests passed. Additional UI checks covered checkbox completion, failed-save recovery, rapid checks and preserved statistics. Transactional database checks covered replacements, duplicate-XP protection, squad confirmation, pair-specific scores, deadline enforcement and weekly rewards. All database verification fixtures were rolled back.
 
 Scores and real-life completion are self-reported. Daily and weekly competitions use UTC. Closed results settle the next time either participant opens the social page; no paid scheduler is required. See `docs/social-play.md` and `docs/ai-quests-setup.md` for behaviour and limits.

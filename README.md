@@ -15,9 +15,9 @@ your pace, earn XP, and progress together with friends in squads.
 | Name | Student number |
 |---|---|
 | Catarina Pedro | 71361 |
-| TODO | TODO |
-| TODO | TODO |
-| TODO | TODO |
+| Ana Luiza Costa | 81023 |
+| Hajna Pintér | 81324 |
+| Janka Stolk | 83499 |
 
 ## Run it locally
 
