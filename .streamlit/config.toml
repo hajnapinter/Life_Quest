@@ -1,0 +1,27 @@
+# Life Quest theme ("Warm glow"). See docs/design.md.
+# This file holds no secrets and is safe to commit.
+
+[theme]
+base = "light"
+primaryColor = "#D4551F"              # burnt orange: buttons, checkboxes, toggles, focus
+backgroundColor = "#FFF9F4"           # warm off-white page
+secondaryBackgroundColor = "#FFF1E6"  # inputs, code, subtle fills
+textColor = "#2B2330"                 # plum ink
+linkColor = "#B8461A"
+borderColor = "#F1E4DA"
+showWidgetBorder = false
+font = "Inter Tight:https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap, sans-serif"
+headingFontWeights = [300, 600, 600, 600, 600, 600]
+headingFontSizes = ["2.6rem", "1.6rem", "1.25rem"]
+baseRadius = "1rem"
+buttonRadius = "full"
+greenColor = "#3E9B63"
+orangeColor = "#D4551F"
+chartCategoricalColors = ["#FF8A4C", "#7CC394", "#B9A8F2", "#F7B7D2", "#FFC48A", "#8FC7E8", "#F2D16B"]
+chartSequentialColors = ["#FFF1E6", "#FFE0CB", "#FFCBA6", "#FFB07A", "#FF9A5C", "#FF8A4C", "#F07434", "#E2642A", "#D4551F", "#B8461A"]
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+maxUploadSize = 8   # MB; profile photos are re-encoded to 80x80 anyway
