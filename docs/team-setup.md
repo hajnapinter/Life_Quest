@@ -22,7 +22,7 @@ Never commit secrets, paste them in issues or include them in screenshots. `.str
 
 ## Database
 
-The current shared Life Quest Supabase project already has the migrations below. Do not rerun the initial schema on that project.
+The current shared Life Quest Supabase project has all six migrations below, including the two security migrations applied and verified on 22 November 2026. Do not rerun the initial schema on that project.
 
 For an empty project, run these in order in the Supabase SQL Editor:
 
