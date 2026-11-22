@@ -142,3 +142,16 @@ Run: `uv run pytest` (Python) and `node --test tests/oauth.test.cjs` (Google sig
 ### Security verification still required
 
 The SQL files document the intended Row Level Security policies and database permissions. Before any public release, verify that those policies, grants, and security-definer functions are correctly configured in the actual Supabase project. Passing local tests does not establish that the live database is secure.
+
+
+### Quest display languages
+
+`quest_languages.py` translates all habit-library title variants, shared squad
+quests and duel score units locally (English, Portuguese, French and German).
+`quest_display.py` applies the selected language on every render, including
+existing active quests, growth suggestions, completion history and CSV quest
+titles. IDs, targets, XP and stored history are never changed by a language switch.
+Custom AI titles use the same verified zero-cost Requesty model for translation,
+with cached results and numeric-target validation. If that service is unavailable,
+the original custom text remains visible with a translated explanation; a different
+task is never silently substituted. Translation sends only quest text, not profiles.

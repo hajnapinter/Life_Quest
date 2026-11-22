@@ -65,7 +65,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 | Activity over time for a pillar | `heatmap(category, activity, title, less, more, weekdays)`; replaces bar charts |
 | Stats | `st.metric` in `st.container(key="stat_row_<name>").columns(2–3)`; white tiles that stay side by side on phones (the change vs last week is hidden there) |
 | A quest the user can tick | `st.checkbox` inside `st.container(key="quest_row_<id>")`; the key prefix gives the card style and the "completed" animation |
-| Main navigation | the `st.radio` inside `st.container(key="bottom_navigation")`; a white pill floating at the bottom on phones, sticky at the top on desktop; the selected item is Action orange |
+| Main navigation | Squad and ⚔️ Competition are separate pages; Squad contains shared quests and its ranking, Competition contains daily 1v1 challenges. Use the `st.radio` inside `st.container(key="bottom_navigation")`; a white pill floating at the bottom on phones, sticky at the top on desktop; the selected item is Action orange |
 | Onboarding choice cards | widgets inside the `onboarding` keyed container get card styling automatically; multi-select options go in a 2-column grid of `st.container(key="pickcard_<name>")` cards (checkbox + caption, no dashes in labels) |
 | A white card around a group of widgets | `st.container(key="card_<name>")`; any key starting with `card_` gets the card style |
 | Weekly ranking | `squad_ranking(rows, me, title)` on the Squad page, for the selected squad only (compact rows, medals for the top 3, the user highlighted). There is no separate Leaderboard page. `leaderboard()` (big podium) is kept but unused. |

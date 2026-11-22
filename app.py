@@ -542,6 +542,7 @@ TRANSLATIONS = {
         "profile": "Your profile",
         "home": "Home", "recap": "Recap",
         "squad": "Squad",
+        "competition": "Competition",
         "leaderboard": "Leaderboard",
         "settings": "Settings",
         "language": "🌍 Language",
@@ -554,6 +555,7 @@ TRANSLATIONS = {
         "profile": "O teu perfil",
         "home": "Início", "recap": "Resumo",
         "squad": "Equipa",
+        "competition": "Competição",
         "leaderboard": "Classificação",
         "settings": "Definições",
         "language": "🌍 Idioma",
@@ -566,6 +568,7 @@ TRANSLATIONS = {
         "profile": "Ton profil",
         "home": "Accueil", "recap": "Bilan",
         "squad": "Équipe",
+        "competition": "Compétition",
         "leaderboard": "Classement",
         "settings": "Paramètres",
         "language": "🌍 Langue",
@@ -578,6 +581,7 @@ TRANSLATIONS = {
         "profile": "Dein Profil",
         "home": "Startseite", "recap": "Rückblick",
         "squad": "Team",
+        "competition": "Wettbewerb",
         "leaderboard": "Rangliste",
         "settings": "Einstellungen",
         "language": "🌍 Sprache",
@@ -809,20 +813,20 @@ def render_dashboard() -> None:
         language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚙️ Settings"]
+    pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings"]
+    language = st.session_state.get("language", "en")
+    labels = {
+        "🏠 Home": t("home"),
+        "📊 Recap": "📊 " + t("recap"),
+        "👥 Squad": "👥 " + t("squad"),
+        "⚔️ Competition": "⚔️ " + t("competition"),
+        "⚙️ Settings": "⚙️ " + t("settings"),
+    }
+    labels.update({item: translate_pillar_label(item, language) for item in pillar_pages})
+
     def nav_label(item):
-        """Translate navigation labels using one shared translation dictionary."""
-        labels = {
-            "🏠 Home": t("home"),
-            "📊 Recap": t("recap"),
-            "👥 Squad": t("squad"),
-            "🏆 Leaderboard": t("leaderboard"),
-            "⚙️ Settings": t("settings"),
-        }
-
-        language = st.session_state.get("language", "en")
-
-        return labels.get(item, translate_pillar_label(item, language))
+        """Keep the translated labels stable throughout this render."""
+        return labels.get(item, item)
 
     if st.session_state.get("current_page") not in pages:
         st.session_state.current_page = "🏠 Home"
@@ -836,6 +840,8 @@ def render_dashboard() -> None:
         render_recap(api_request)
     elif page == "👥 Squad":
         render_squad()
+    elif page == "⚔️ Competition":
+        render_social(api_request, competition=True)
     elif page == "⚙️ Settings":
         render_settings()
 

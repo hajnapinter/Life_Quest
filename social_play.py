@@ -1,4 +1,5 @@
 """Shared squad missions and pair-specific daily competitions."""
+from quest_display import quest_text, quest_texts
 import streamlit as st
 from ai_quest_ui import render_quest_styles
 from design import hero, member_chips, squad_ranking
@@ -32,27 +33,33 @@ def queue_squad_confirmation(quest_id):
     if st.session_state.get('team_check_'+quest_id):
         st.session_state.team_confirmation_request=quest_id
 
-def render_social(api):
+def render_social(api, competition=False):
     render_quest_styles()
 
-    st.markdown('<div class="lq-eyebrow">' + tx("Squad", "Equipa", "Équipe", "Team") + '</div>', unsafe_allow_html=True)
-    st.title(tx(
-        "Better together",
-        "Melhores juntos",
-        "Ensemble, c'est mieux",
-        "Gemeinsam besser"
-    ))
-    hero(
-        tx("Shared quests", "Missões partilhadas", "Quêtes communes", "Gemeinsame Quests"),
-        tx("Grow with your friends", "Cresce com os teus amigos", "Progresse avec tes amis", "Wachse mit deinen Freunden"),
-        tx(
-            "Share a real experience, or give a friend a friendly challenge.",
-            "Partilha uma experiência real ou desafia um amigo de forma amigável.",
-            "Partage une vraie expérience ou lance un défi amical à un ami.",
-            "Teile ein echtes Erlebnis oder fordere einen Freund zu einer freundlichen Herausforderung heraus."
-        ),
-        variant="lilac",
-    )
+    if competition:
+        st.markdown('<div class="lq-eyebrow">' + tx("Competition", "Competição", "Compétition", "Wettbewerb") + '</div>', unsafe_allow_html=True)
+        st.title(tx("A friendly challenge", "Um desafio entre amigos", "Un défi entre amis", "Ein freundschaftlicher Wettstreit"))
+        hero(
+            tx("Daily 1v1 quests", "Missões diárias 1v1", "Quêtes quotidiennes en duel", "Tägliche 1-gegen-1-Quests"),
+            tx("Challenge a friend", "Desafia um amigo", "Défie un ami", "Fordere einen Freund heraus"),
+            tx("Same quest. Your own pace. A new winner every week.",
+               "A mesma missão. Ao teu ritmo. Um novo vencedor a cada semana.",
+               "La même quête. À ton rythme. Un nouveau gagnant chaque semaine.",
+               "Dieselbe Quest. Dein eigenes Tempo. Jede Woche ein neuer Sieger."),
+            variant="peach",
+        )
+    else:
+        st.markdown('<div class="lq-eyebrow">' + tx("Squad", "Equipa", "Équipe", "Team") + '</div>', unsafe_allow_html=True)
+        st.title(tx("Better together", "Melhores juntos", "Ensemble, c'est mieux", "Gemeinsam besser"))
+        hero(
+            tx("Shared quests", "Missões partilhadas", "Quêtes communes", "Gemeinsame Quests"),
+            tx("Grow with your friends", "Cresce com os teus amigos", "Progresse avec tes amis", "Wachse mit deinen Freunden"),
+            tx("Share real experiences and complete quests together.",
+               "Partilha experiências reais e completa missões em conjunto.",
+               "Partage de vraies expériences et réalise des quêtes en équipe.",
+               "Teilt echte Erlebnisse und erledigt gemeinsam Quests."),
+            variant="lilac",
+        )
 
     state, error = rpc(api, 'get_social_state')
 
@@ -109,16 +116,10 @@ def render_social(api):
     if st.session_state.get('social_notice'):
         st.success(st.session_state.pop('social_notice'))
 
-    together, competition = st.tabs([
-        tx("🤝 Squad quests", "🤝 Missões de equipa", "🤝 Quêtes d'équipe", "🤝 Team-Quests"),
-        tx("⚔️ 1v1 competitions", "⚔️ Competições 1v1", "⚔️ Compétitions 1 contre 1", "⚔️ 1-gegen-1-Wettbewerbe")
-    ])
-
-    with together:
-        render_squads(api, state)
-
-    with competition:
+    if competition:
         render_competitions(api, state)
+    else:
+        render_squads(api, state)
 
 def render_squad_ranking(api, squad):
     """This week's XP for the members of one squad (from the weekly leaderboard, matched by name)."""
@@ -185,14 +186,15 @@ def render_squads(api, state):
                     f"Deine Teilnahme: {confirmed_total}/{len(squad['quests'])} bestätigt"
                 ))
 
-                for quest in squad['quests']:
+                titles = quest_texts([q['title'] for q in squad['quests']])
+                for quest, translated_title in zip(squad['quests'], titles):
                     mine = st.session_state.user['id'] in quest['confirmed']
                     key = 'team_check_' + quest['id']
                     st.session_state[key] = mine
 
                     with st.container(key='quest_row_team_' + quest['id']):
                         st.checkbox(
-                            quest['title'],
+                            translated_title,
                             key=key,
                             disabled=mine or len(squad['members']) < 2,
                             on_change=queue_squad_confirmation,
@@ -392,14 +394,14 @@ def render_competitions(api,state):
 
             if current:
                 scores={s['user_id']:s['value'] for s in current['scores']}
-                st.markdown('**'+current['title']+'**')
+                st.markdown('**'+quest_text(current['title'])+'**')
                 st.caption(tx('Today · ','Hoje · ','Aujourd\'hui · ','Heute · ')+state['today']+tx(' · the exact same quest for both of you',
                            ' · exatamente a mesma missão para os dois',' · exactement la même quête pour vous deux',' · genau dieselbe Quest für euch beide'))
                 st.write(tx('Your result: ','O teu resultado: ','Ton résultat : ','Dein Ergebnis: ')+'**'+str(scores.get(uid,not_submitted))+'** · '
                          +friend_name+': **'+str(scores.get(friend_id,not_submitted))+'**')
                 with st.form('score_'+current['id']):
 
-                    value=st.number_input(tx('Your total','O teu total','Ton total','Deine Summe')+' ('+current['unit']+')',
+                    value=st.number_input(tx('Your total','O teu total','Ton total','Deine Summe')+' ('+quest_text(current['unit'])+')',
                                           min_value=0,max_value=current['max'],value=scores.get(uid,0),step=1)
                     submitted=st.form_submit_button(tx('Save my result','Guardar o meu resultado','Enregistrer mon résultat','Mein Ergebnis speichern'),type='primary')
                 if submitted:act(api,'record_duel_score',{'quest_id':current['id'],'result_value':int(value)},
@@ -424,5 +426,5 @@ def render_competitions(api,state):
                              else tx('No entries','Sem registos','Aucun résultat','Keine Einträge') if not scores
                              else tx('Tie','Empate','Égalité','Unentschieden') if d['winner'] is None
                              else you_won if d['winner']==uid else won(friend_raw))
-                    table.append(dict(zip(columns,[d['day'],d['title'],d['unit'],str(scores.get(uid,'—')),str(scores.get(friend_id,'—')),outcome])))
+                    table.append(dict(zip(columns,[d['day'],quest_text(d['title']),quest_text(d['unit']),str(scores.get(uid,'—')),str(scores.get(friend_id,'—')),outcome])))
                 st.dataframe(table,hide_index=True,width='stretch')

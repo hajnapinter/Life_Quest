@@ -1,4 +1,5 @@
 import html
+from quest_display import quest_text, quest_texts
 import os
 import time
 import threading
@@ -60,7 +61,7 @@ def starting_level(category):
 
 def build_batch(category, slots, rows, pending_id=None, allow_ai=True):
     user_id=st.session_state.user['id']
-    pending_key=f'quest_batch_{user_id}_{category}_{slots}_{pending_id}'
+    pending_key=f'quest_batch_{user_id}_{category}_{slots}_{pending_id}_{st.session_state.get("language", "en")}'
     if pending_key in st.session_state:
         return st.session_state[pending_key],pending_key
     history=[q for q in rows if q['category']==category]
@@ -194,10 +195,8 @@ def render_quest_cards(api, rows, category, limit=5):
     language = st.session_state.get("language", "en")
     # Five quests stay ready per pillar; only the first `limit` (by slot) are shown.
     active=sorted([q for q in rows if q['category']==category and q['status']=='active'],key=lambda q:q['slot'])[:limit]
-    for quest in active:
-        title=clean_title(quest['title'],quest.get('target'))
-        if quest.get('source')=='curated' and quest.get('focus') in EXPERIENCE_FOCUSES:
-            title=slot_plan(category,quest['slot'],starting_level(category),rows)['title']
+    titles=quest_texts([clean_title(q['title'],q.get('target')) for q in active])
+    for quest, title in zip(active, titles):
         with st.container(key='quest_row_'+quest['id']):
             st.checkbox(title,key='quest_check_'+quest['id'],on_change=queue_completion,args=(quest['id'],))
             hint=progress_hint(quest,rows)
@@ -346,7 +345,7 @@ def render_pillar(api, category):
             for slot in range(1,6):
                 plan=slot_plan(category,slot,starting_level(category),own)
                 completed=[q for q in own if q.get('slot')==slot and q['status']=='completed']
-                with st.expander(TRACKS[category][slot-1][0].replace('_',' ').title()):
+                with st.expander(quest_text(plan['title'])):
                     step_label = {
                         "en": "Your current step",
                         "pt": "O teu passo atual",
@@ -355,7 +354,7 @@ def render_pillar(api, category):
                             }.get(st.session_state.get("language", "en"), "Your current step")
 
 
-                    st.write(f'**{step_label}:** {plan["title"]}')
+                    st.write(f'**{step_label}:** {quest_text(plan["title"])}')
                     habit_message = {
             "en": f"{len(completed)} completed in this habit track. Each completion unlocks the next step.",
             "pt": f"{len(completed)} missões concluídas neste hábito. Cada conclusão desbloqueia o próximo passo.",
@@ -399,13 +398,14 @@ def render_pillar(api, category):
     table_labels["en"]
 )
 
+        localized_history=quest_texts([q["title"] for q in finished])
         st.dataframe([
     {
-        quest_label: q["title"],
+        quest_label: translated_title,
         completed_label: q["completed_at"][:10] if q.get("completed_at") else "",
         "XP": q.get("points", 0) if q.get("legacy") else 10 + 5 * q["difficulty"]
     }
-    for q in finished
+    for q, translated_title in zip(finished, localized_history)
         ], hide_index=True, width="stretch")
     else:
         st.info({
@@ -477,6 +477,10 @@ def render_recap(api):
                        f'As {total} missões concluídas num ficheiro CSV. Abre no Excel, Numbers ou Google Sheets.',
                        f'Tes {total} quêtes terminées dans un fichier CSV. S’ouvre avec Excel, Numbers ou Google Sheets.',
                        f'Alle {total} abgeschlossenen Quests als CSV-Datei. Öffnet sich in Excel, Numbers oder Google Sheets.'))
+        export_rows=[dict(q) for q in everything if q.get('status')=='completed']
+        for q, title in zip(export_rows, quest_texts([q.get('title','') for q in export_rows])):
+            q['title']=title
+            q['category']=category_name(q.get('category',''))
         st.download_button('⬇️ '+_tx('Download CSV','Descarregar CSV','Télécharger le CSV','CSV herunterladen'),
-                           data=completed_csv(everything),file_name=f'life-quest-history-{recap["week_start"].isoformat()}.csv',
+                           data=completed_csv(export_rows),file_name=f'life-quest-history-{recap["week_start"].isoformat()}.csv',
                            mime='text/csv',disabled=total==0,type='primary',key='export_csv')
