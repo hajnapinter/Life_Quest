@@ -8,7 +8,9 @@ your pace, earn XP, and progress together with friends in squads.
 
 ## Deployed application
 
-**TODO: paste the Streamlit Community Cloud URL here** (how to deploy: [docs/deploy.md](docs/deploy.md))
+[Open Life Quest](https://life-quest-team.streamlit.app/)
+
+Deployment: Streamlit Community Cloud, `main` branch. Setup: [docs/deploy.md](docs/deploy.md).
 
 ## Team
 
@@ -40,7 +42,7 @@ Without an AI key it still works: quests then come from the built-in habit libra
 - Weekly recap with a per-pillar breakdown and a CSV export of all completed quests.
 - Squads with invite codes, shared weekly quests needing two confirmations, and a weekly squad ranking.
 - Daily 1v1 competitions with friends and weekly winners.
-- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo, phone/laptop notifications, email reminders.
+- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo and notification preferences. Browser notifications currently support a device test; scheduled push and reminder emails are not implemented.
 - Life Quest Pro (demo subscription): all pillars, avatar styles, country-personalised quests (placeholder), and a list of features that would need paid APIs.
 - English, Portuguese, French and German everywhere after login (onboarding included); works on phone and desktop.
 

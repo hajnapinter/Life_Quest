@@ -61,3 +61,24 @@ The SQL files were checked with the PostgreSQL parser. Their *behaviour* is not 
 1. Supabase → SQL Editor: run `supabase/protect-profile-points.sql`, then `supabase/security-hardening.sql`.
 2. Supabase → Authentication → Policies: minimum password length 8.
 3. Then follow the demo checklist in `architecture.md` once, to confirm squads and quests still work.
+
+
+## Live verification — 22 November 2026
+
+Both `protect-profile-points.sql` and `security-hardening.sql` were applied
+successfully to the shared Supabase project. Read-only catalog checks confirmed:
+all public tables have RLS; authenticated users cannot update profile points or
+insert squad memberships directly; the old reward RPC is disabled; the new
+completion RPC includes the daily reward cap. The Auth password minimum was set
+to 8 characters.
+
+A transaction with three temporary accounts checked eight behaviours against the
+real database: personal completion/replay protection, identical shared quests,
+exactly one reward per participant after two confirmations, outsider rejection,
+identical duel quests, separate editable scores, out-of-range rejection and
+outsider score rejection. All eight checks passed. The transaction was rolled
+back, including accounts, memberships, scores and XP.
+
+A scan of 124 unique historical file blobs found no local configured keys or
+JWT/API-token patterns. This is an automated pattern check, not a guarantee that
+every possible kind of secret can be detected.
