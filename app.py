@@ -908,7 +908,8 @@ if st.session_state.access_token:
 
 
 # Persist the rotated token after renewal, before rendering the authenticated app.
-restore_status = sync_session(api_request,supabase_config()[0])
+restore_status = sync_session(api_request,supabase_config()[0],
+                              oauth_pending=bool(st.query_params.get("code")))
 
 if not st.session_state.access_token:
     render_restore_status(restore_status)

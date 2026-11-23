@@ -12,14 +12,18 @@ import streamlit.components.v1 as components
 _session = components.declare_component('lifequest_session', path=str(Path(__file__).parent/'session_component'))
 
 RESTORE_TEXT = {
-    'en': ('Restoring your sign-in…', 'Your connection was interrupted. Retry to restore your sign-in.', 'Try again', 'Sign in again', 'Your browser blocked session storage. Sign-in cannot be remembered on this device.'),
-    'pt': ('A recuperar a tua sessão…', 'A ligação foi interrompida. Tenta recuperar a tua sessão.', 'Tentar novamente', 'Iniciar sessão novamente', 'O navegador bloqueou o armazenamento da sessão. Não é possível memorizar o acesso neste dispositivo.'),
-    'fr': ('Restauration de ta connexion…', 'La connexion a été interrompue. Réessaie de restaurer ta session.', 'Réessayer', 'Se reconnecter', 'Ton navigateur bloque le stockage de session. La connexion ne peut pas être mémorisée sur cet appareil.'),
-    'de': ('Deine Anmeldung wird wiederhergestellt…', 'Die Verbindung wurde unterbrochen. Versuche die Anmeldung erneut wiederherzustellen.', 'Erneut versuchen', 'Erneut anmelden', 'Dein Browser blockiert den Sitzungsspeicher. Die Anmeldung kann auf diesem Gerät nicht gespeichert werden.'),
+    'en': ('Restoring your sign-in…', 'We could not restore your saved sign-in. Retry, or sign in again.', 'Try again', 'Sign in again', 'Your browser blocked session storage. Sign-in cannot be remembered on this device.'),
+    'pt': ('A recuperar a tua sessão…', 'Não foi possível recuperar a sessão guardada. Tenta novamente ou inicia sessão.', 'Tentar novamente', 'Iniciar sessão novamente', 'O navegador bloqueou o armazenamento da sessão. Não é possível memorizar o acesso neste dispositivo.'),
+    'fr': ('Restauration de ta connexion…', 'Impossible de restaurer la session enregistrée. Réessaie ou reconnecte-toi.', 'Réessayer', 'Se reconnecter', 'Ton navigateur bloque le stockage de session. La connexion ne peut pas être mémorisée sur cet appareil.'),
+    'de': ('Deine Anmeldung wird wiederhergestellt…', 'Die gespeicherte Anmeldung konnte nicht wiederhergestellt werden. Versuche es erneut oder melde dich an.', 'Erneut versuchen', 'Erneut anmelden', 'Dein Browser blockiert den Sitzungsspeicher. Die Anmeldung kann auf diesem Gerät nicht gespeichert werden.'),
 }
 
 
-def sync_session(api, project_url):
+def sync_session(api, project_url, *, oauth_pending=False):
+    # The callback owns this sign-in attempt. Do not mount a competing restore
+    # component or restore a previous account before PKCE finishes.
+    if oauth_pending and not st.session_state.get('access_token'):
+        return 'ready'
     clearing=st.session_state.get('clear_browser_session',False)
     token=st.session_state.get('refresh_token')
     mode='clear' if clearing else 'write' if token else 'read'

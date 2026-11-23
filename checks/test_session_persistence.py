@@ -46,3 +46,13 @@ def test_restore_css_stays_inside_the_style_element():
     from design import _CSS
     assert _CSS.lstrip().startswith("<style>")
     assert _CSS.index("<style>") < _CSS.index(".st-key-auth_restoring") < _CSS.index("</style>")
+
+
+def test_oauth_callback_takes_priority_over_a_previously_saved_account(monkeypatch):
+    setup(monkeypatch,None)
+    component=Mock(side_effect=AssertionError('must not mount a competing restore'))
+    monkeypatch.setattr(session,'_session',component)
+    api=Mock()
+    assert session.sync_session(api,'https://project.supabase.co',oauth_pending=True)=='ready'
+    component.assert_not_called()
+    api.assert_not_called()
