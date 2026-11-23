@@ -93,7 +93,7 @@ Five quests are always kept ready per pillar. Users choose how many to **see** (
 ## Personalisation and navigation
 
 - All seven pillars and avatar rings are available to everyone. No subscription modes.
-- Six main navigation items: Home, Recap, Squad, Competition, Settings, Leaderboard. Labels have no emoji, use dark text and are centered. On narrow phones use two rows of three items. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
+- Six main navigation items, in this order: Home, Recap, Squad, Competition, Leaderboard, Settings. Labels have no emoji, use dark text and are centered. On narrow phones use two rows of three items. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
 - `places.py` searches cities via Photon. City, country, target language and preferred session length personalise quests through `personalization.py`; numeric progression stays in `quest_plan.py`.
 - Clearly disclose that location and preferences are sent to Requesty for generation; never send names or email addresses.
 - Daily opt-in email reminders use the hourly worker. Device notifications remain a test only.
@@ -132,7 +132,7 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 
 ## Multiplayer and progress review
 
-- Competition shows active pair standings and today's score form before rules and invitation controls. Confirmed XP and provisional same-day scores are explicitly distinguished; refresh every 30 seconds.
+- Competition shows active pair standings and today's score form first, then invitation controls; the explanation ("A daily challenge. A weekly winner." and Scoring & deadlines) sits at the very bottom of the page. Confirmed XP and provisional same-day scores are explicitly distinguished; refresh every 30 seconds.
 - Squad uses a member-by-quest participation matrix on the left; the member ranking sits in the right desktop column and stacks on phones. Names and status cells must have accessible labels; never rely only on color.
 - Habit expanders use broad names from `habit_journey.habit_name`; inside, show recorded first/latest completed targets separately from the next target, a long-term direction and the purpose. Do not change progression.
 - Progress reflections use the verified free Requesty model with bounded activity evidence and no identity/location. Failures use a clearly labeled local encouragement, never pretend AI succeeded.

@@ -401,25 +401,6 @@ def render_competitions(api,state):
                         act(api,'close_friend_duel',{'pair_id':pair['id'],'action':'end'},
                             tx("Competition will end after today.","A competição termina após hoje.","Le défi se termine après aujourd'hui.","Der Wettbewerb endet nach heute."))
 
-    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
-                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
-    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
-                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
-                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
-                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
-    with st.expander(tx('Scoring & deadlines','Pontuação e prazos','Points et délais','Punkte und Fristen')):
-        st.write(tx('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.',
-                      'Os resultados são declarados por cada um e podem ser editados até ao fim do dia, UTC. As semanas vão de segunda a domingo.',
-                      'Les résultats sont déclarés par chacun et modifiables jusqu\'à la fin de la journée, UTC. Les semaines vont du lundi au dimanche.',
-                      'Ergebnisse werden selbst eingetragen und können bis Tagesende (UTC) geändert werden. Wochen laufen von Montag bis Sonntag.'))
-        st.write(tx('Daily XP: winner 35, other submitting player 15, tied players 25 each. Weekly bonus: winner 50, participating players in a tied week 20 each. Missing entries earn no daily XP.',
-                      'XP diário: vencedor 35, outro jogador que submeteu 15, empate 25 cada. Bónus semanal: vencedor 50, em semana empatada 20 para cada participante. Sem registo não há XP diário.',
-                      'XP quotidiens : gagnant 35, autre joueur ayant participé 15, égalité 25 chacun. Bonus hebdomadaire : gagnant 50, semaine à égalité 20 par participant. Sans résultat, pas d\'XP quotidiens.',
-                      'Tages-XP: Sieger 35, anderer Teilnehmer 15, Gleichstand je 25. Wochenbonus: Sieger 50, bei Gleichstand je 20 pro Teilnehmer. Ohne Eintrag gibt es keine Tages-XP.'))
-        st.write(tx('Closed days and weeks settle when either player opens this page. Previous results stay in your history.',
-                      'Os dias e semanas fechados são calculados quando um dos jogadores abre esta página. Os resultados anteriores ficam no teu histórico.',
-                      'Les jours et semaines terminés sont calculés dès qu\'un des joueurs ouvre cette page. Les résultats précédents restent dans ton historique.',
-                      'Abgeschlossene Tage und Wochen werden ausgewertet, sobald einer der Spieler diese Seite öffnet. Frühere Ergebnisse bleiben in deinem Verlauf.'))
     with st.expander(tx('Challenge a friend','Desafiar um amigo','Défier un ami','Freund herausfordern'),expanded=not state['duels']):
 
         friends={f['id']:f['name'] for f in state['friends']}
@@ -465,3 +446,24 @@ def render_competitions(api,state):
                                      'As tuas competições aparecem aqui quando convidares um amigo.',
                                      'Tes défis apparaîtront ici dès que tu auras invité un ami.',
                                      'Deine Wettbewerbe erscheinen hier, sobald du einen Freund einlädst.'))
+
+    # How the competition works: kept at the bottom so results and actions come first.
+    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
+                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
+    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
+                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
+                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
+                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
+    with st.expander(tx('Scoring & deadlines','Pontuação e prazos','Points et délais','Punkte und Fristen')):
+        st.write(tx('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.',
+                      'Os resultados são declarados por cada um e podem ser editados até ao fim do dia, UTC. As semanas vão de segunda a domingo.',
+                      'Les résultats sont déclarés par chacun et modifiables jusqu\'à la fin de la journée, UTC. Les semaines vont du lundi au dimanche.',
+                      'Ergebnisse werden selbst eingetragen und können bis Tagesende (UTC) geändert werden. Wochen laufen von Montag bis Sonntag.'))
+        st.write(tx('Daily XP: winner 35, other submitting player 15, tied players 25 each. Weekly bonus: winner 50, participating players in a tied week 20 each. Missing entries earn no daily XP.',
+                      'XP diário: vencedor 35, outro jogador que submeteu 15, empate 25 cada. Bónus semanal: vencedor 50, em semana empatada 20 para cada participante. Sem registo não há XP diário.',
+                      'XP quotidiens : gagnant 35, autre joueur ayant participé 15, égalité 25 chacun. Bonus hebdomadaire : gagnant 50, semaine à égalité 20 par participant. Sans résultat, pas d\'XP quotidiens.',
+                      'Tages-XP: Sieger 35, anderer Teilnehmer 15, Gleichstand je 25. Wochenbonus: Sieger 50, bei Gleichstand je 20 pro Teilnehmer. Ohne Eintrag gibt es keine Tages-XP.'))
+        st.write(tx('Closed days and weeks settle when either player opens this page. Previous results stay in your history.',
+                      'Os dias e semanas fechados são calculados quando um dos jogadores abre esta página. Os resultados anteriores ficam no teu histórico.',
+                      'Les jours et semaines terminés sont calculés dès qu\'un des joueurs ouvre cette page. Les résultats précédents restent dans ton historique.',
+                      'Abgeschlossene Tage und Wochen werden ausgewertet, sobald einer der Spieler diese Seite öffnet. Frühere Ergebnisse bleiben in deinem Verlauf.'))

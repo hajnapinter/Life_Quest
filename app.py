@@ -813,7 +813,7 @@ def render_dashboard() -> None:
         language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings", "Leaderboard"]
+    pages = ["🏠 Home", "📊 Recap", "👥 Squad", "⚔️ Competition", "Leaderboard", "⚙️ Settings"]
     language = st.session_state.get("language", "en")
     if st.session_state.user.get('user_metadata',{}).get('lifequest_language')!=language:
         updated,error=api_request('PUT','/auth/v1/user',{'data':{'lifequest_language':language}},st.session_state.access_token)

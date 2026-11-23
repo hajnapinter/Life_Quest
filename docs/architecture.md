@@ -166,7 +166,7 @@ task is never silently substituted. Translation sends only quest text, not profi
 
 `supabase/product-fixes.sql` wraps the existing completion transaction to record exact XP and a personalisation context snapshot; numeric progression and same-day replacement are unchanged. `get_activity_history` includes social rewards, while the member-only squad leaderboard uses stable user IDs. Members can leave squads; pending duels can be declined or cancelled, and active duels end after the current UTC day so today's score remains fair. Social screens refresh every 30 seconds.
 
-Six navigation destinations: Home, Recap, Squad, Competition, Settings and Leaderboard. Pillar pages open within Home. Greeting XP renders after completion processing.
+Six navigation destinations: Home, Recap, Squad, Competition, Leaderboard and Settings. Pillar pages open within Home. Greeting XP renders after completion processing.
 
 `session_component/` implements the remembered sign-in (up to 30 days, verified by Supabase on every restore; see section 3). `scripts/send_reminders.py`, `supabase/reminders.sql` and `.github/workflows/reminders.yml` implement opt-in localized email and competition settlement. See [reminders.md](reminders.md) for permissions, quotas, retry semantics and operational limits.
 
