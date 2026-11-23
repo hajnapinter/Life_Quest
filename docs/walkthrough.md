@@ -1,10 +1,10 @@
 # Repository walkthrough: preparation
 
-In the walkthrough, the teaching staff open this repository and ask high-level questions. **Any member can be asked about any part**, and the grade rewards explaining *how* it is built, *why*, its *limits*, and *how it could change*. This page is the script. The details behind every answer are in [architecture.md](architecture.md) and [security-audit.md](security-audit.md).
+In the walkthrough, the teaching staff open this repository and ask high-level questions. **Any member can be asked about any part**, and the grade rewards explaining *how* it is built, *why*, its *limits*, and *how it could change*. This page is a guided tour of the repository and answers to common questions about how it is built. The details behind every answer are in [architecture.md](architecture.md) and [security-audit.md](security-audit.md).
 
 ## 1. The 5-minute tour (open the files in this order)
 
-| # | Open | Say |
+| # | Open | What it shows |
 |---|---|---|
 | 1 | `README.md` | What Life Quest is, the deployed URL, how to run the app and the tests. |
 | 2 | `app.py` → `api_request` | "Every database call goes through this one function. It sends the **user's own login token**, so Supabase's Row Level Security decides what each user may see or change, not our Python code." |
@@ -14,7 +14,7 @@ In the walkthrough, the teaching staff open this repository and ask high-level q
 | 6 | `tests/` + `.github/workflows/tests.yml` | "238 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
 | 7 | `docs/` | Architecture, security audit, design rules, deployment. |
 
-## 2. Questions you should be able to answer
+## 2. Common questions
 
 ### Architecture and data
 **Where is the data stored?**
@@ -41,7 +41,7 @@ All styling is in `design.py` and `.streamlit/config.toml`; rules for people and
 - The Google sign-in script (PKCE) in JavaScript.
 
 **What do they *not* cover?**
-The real SQL functions and RLS policies (the fake follows them but isn't Postgres), the visual design, the real AI's wording, browser notifications, and real emails. Those were checked by hand.
+The automated suite does not run against the real database: the fake follows the SQL rules but isn't Postgres. We cover that gap separately with the `supabase/check-*.sql` scripts, which test Row Level Security, permissions and the XP functions on the live database and roll everything back (48 checks, all passing; see [verification.md](verification.md)); they are run by hand, not in CI. Also not automated: the visual design, the real AI's wording, browser notifications and real email delivery, which were checked by hand.
 
 **Why a fake Supabase instead of the real one?**
 Tests must be fast, repeatable and must not write into our shared database. The fake answers the same HTTP requests as Supabase, and enforces the same key rules.
@@ -63,7 +63,7 @@ What happens when each service fails is in section 7 of [architecture.md](archit
 
 ### Security
 **Did you do a security review?**
-Yes, see `docs/security-audit.md`: 3 high, 3 medium, 8 low findings. The app-side ones are fixed and tested. The database ones are fixed in `security-hardening.sql`. A good example to explain: anyone could join any squad through the API because of an old insert policy; now only the invite-code function can add members.
+Yes, two. See `docs/security-audit.md`. The first audit found 3 high, 3 medium and 8 low findings: the app-side ones are fixed and tested, the database ones are fixed in `security-hardening.sql`. A follow-up review of the newer code found one medium issue (the sign-in components trusted the page that embedded them; they now only talk to the app's own address) and one low issue (AI-written quest titles are now shown as plain text), both fixed. It also confirmed that an anonymous visitor cannot read any table on the live database. A good example to explain: anyone could join any squad through the API because of an old insert policy; now only the invite-code function can add members.
 
 **How do you stop a user from cheating XP or reading other people's data?**
 - **Reading data:** Row Level Security on every table, so users only see their own rows.
