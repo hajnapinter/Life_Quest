@@ -5,6 +5,7 @@ import streamlit as st
 from ai_quest_ui import render_quest_styles
 from design import hero, member_chips, squad_ranking, participation_matrix, duel_scoreboard
 from duel_progress import standings
+from competition_scores import score_text
 from auth_helpers import friendly_error, plain_markdown
 def tx(en, pt, fr, de):
     language = st.session_state.get("language", "en")
@@ -368,14 +369,24 @@ def render_competitions(api,state):
                          +friend_name+': **'+str(scores.get(friend_id,not_submitted))+'**')
                 with st.form('score_'+current['id']):
 
-                    value=st.number_input(tx('Your total','O teu total','Ton total','Deine Summe')+' ('+quest_text(current['unit'])+')',
-                                          min_value=0,max_value=current['max'],value=scores.get(uid,0),step=1)
+                    value=st.text_input(tx('Your total','O teu total','Ton total','Deine Summe')+' ('+quest_text(current['unit'])+')',
+                                        value=str(scores.get(uid,0)))
                     submitted=st.form_submit_button(tx('Save my result','Guardar o meu resultado','Enregistrer mon résultat','Mein Ergebnis speichern'),type='primary')
-                if submitted:act(api,'record_duel_score',{'quest_id':current['id'],'result_value':int(value)},
-                                 tx('Your result is saved. You can update it before the deadline.',
-                                    'O teu resultado foi guardado. Podes atualizá-lo até ao prazo.',
-                                    'Ton résultat est enregistré. Tu peux le modifier avant la fin du délai.',
-                                    'Dein Ergebnis ist gespeichert. Du kannst es bis zur Frist ändern.'))
+                if submitted:
+                    try:
+                        result_value=score_text(value)
+                    except ValueError:
+                        st.error(tx('Enter a whole number (0 or higher).',
+                                    'Introduz um número inteiro (0 ou superior).',
+                                    'Saisis un nombre entier (0 ou plus).',
+                                    'Gib eine ganze Zahl ein (0 oder höher).'))
+                    else:
+                        # A decimal string avoids JavaScript/JSON float rounding for large totals.
+                        act(api,'record_duel_score',{'quest_id':current['id'],'result_value':result_value},
+                            tx('Your result is saved. You can update it before the deadline.',
+                               'O teu resultado foi guardado. Podes atualizá-lo até ao prazo.',
+                               'Ton résultat est enregistré. Tu peux le modifier avant la fin du délai.',
+                               'Dein Ergebnis ist gespeichert. Du kannst es bis zur Frist ändern.'))
 
             if pair['weeks']:
                 st.markdown('**'+tx('Weekly results','Resultados semanais','Résultats de la semaine','Wochenergebnisse')+'**')

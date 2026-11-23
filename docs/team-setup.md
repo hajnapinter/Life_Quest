@@ -65,3 +65,5 @@ After the existing SQL migrations (including social play and security hardening)
 Apply `supabase/weekly-leaderboard.sql` last, after the product/reminder migrations. Never rerun an earlier RPC migration afterward without reapplying this final migration. Manual rollback checks: `supabase/check-weekly-leaderboard.sql`.
 
 Privacy: apply `supabase/privacy.sql` after `supabase/weekly-leaderboard.sql`, then run `supabase/check-privacy.sql`. The first installs an owner-only procedure; the second rolls back synthetic test data. See [privacy operations](privacy-operations.md).
+
+Competition totals: apply `supabase/competition-no-score-cap.sql` last, after leaderboard/privacy SQL, to remove per-quest score ceilings. Verify using the rolled-back fixture script `supabase/check-competition-no-score-cap.sql`.

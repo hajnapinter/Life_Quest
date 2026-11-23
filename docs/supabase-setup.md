@@ -84,3 +84,5 @@ Google's verified identity does not need a separate Supabase signup email.
 - https://supabase.com/docs/reference/javascript/auth-resend
 
 Privacy: apply `supabase/privacy.sql` after `supabase/weekly-leaderboard.sql`, then run `supabase/check-privacy.sql`. The first installs an owner-only procedure; the second rolls back synthetic test data. See [privacy operations](privacy-operations.md).
+
+Competition totals: apply `supabase/competition-no-score-cap.sql` last, after leaderboard/privacy SQL, to remove per-quest score ceilings. Verify using the rolled-back fixture script `supabase/check-competition-no-score-cap.sql`.

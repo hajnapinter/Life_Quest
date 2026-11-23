@@ -141,3 +141,5 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus shows a 2px Action (`#BF4A1A`) outline, about 5:1 against the white bar, so keyboard users can always see where they are. Never use a pale outline (the old `#E8CFC0` was 1.49:1).
 
 During verified session restoration, hide only the auth form with `.st-key-auth_restoring` and show the held sprout loading screen (`splash(hold=True)`) with a translated status for screen readers, so the login page never flashes. Do not flash a signed-out screen or hide the session component. Connection failures offer retry without discarding credentials.
+
+Competition totals use a labelled decimal text field with no per-quest maximum. Accept only non-negative whole-number digits, preserve large values without float conversion, and keep validation messages in all four UI languages. Do not reinstate the legacy daily `max` as a widget ceiling.

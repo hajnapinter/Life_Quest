@@ -113,7 +113,7 @@ def test_active_competition_renders_live_standings_and_score_form(backend):
  at=go(log_in('duel-layout@example.com'),'⚔️ Competition')
  assert not at.exception
  assert '1234' in ' '.join(m.value for m in at.markdown)
- assert any('Your total' in n.label for n in at.number_input)
+ assert any('Your total' in n.label for n in at.text_input)
  assert any(e.label=='Scoring & deadlines' for e in at.expander)
  assert 'Confirmed weekly XP' in ' '.join(m.value for m in at.markdown)
 
