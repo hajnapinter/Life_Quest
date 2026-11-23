@@ -137,3 +137,5 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 - Habit expanders use broad names from `habit_journey.habit_name`; inside, show recorded first/latest completed targets separately from the next target, a long-term direction and the purpose. Do not change progression.
 - Progress reflections use the verified free Requesty model with bounded activity evidence and no identity/location. Failures use a clearly labeled local encouragement, never pretend AI succeeded.
 - Settings omits city editing and the personalization form; stored onboarding preferences remain in effect.
+
+Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus retains a subtle visible outline.

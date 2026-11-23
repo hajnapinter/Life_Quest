@@ -112,14 +112,14 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
 .st-key-bottom_navigation [role="radiogroup"]::-webkit-scrollbar {display:none;}
 .st-key-bottom_navigation [role="radiogroup"] > div {width:100%%; min-width:0;}
 .st-key-bottom_navigation [role="radiogroup"] label {width:100%%; white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
-  color:%(muted)s; font-weight:500; transition:background .2s ease;}
+  color:#55444F; font-weight:400; box-shadow:none; transition:background .2s ease;}
 .st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; display:flex; justify-content:center; text-align:center;}
 .st-key-bottom_navigation [role="radiogroup"] label [data-testid="stMarkdownContainer"] {width:100%%; text-align:center;}
-.st-key-bottom_navigation [role="radiogroup"] label p {color:#1C1720; font-weight:600; text-align:center; font-size:13px; line-height:1.3; overflow-wrap:anywhere;}
+.st-key-bottom_navigation [role="radiogroup"] label p {color:#55444F; font-weight:400; text-align:center; font-size:13px; line-height:1.3; overflow-wrap:anywhere;}
 div[class*="st-key-pillar_link_"] button p {font-size:1.15rem; font-weight:600;}
 div[class*="st-key-pillar_link_"] button {padding-left:0;}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#FFE3D1; color:%(ink)s; box-shadow:inset 0 -3px 0 %(action)s;}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) p {color:%(ink)s;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#FFF1E6; color:#55444F; box-shadow:none;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) p {color:#55444F;}
 .st-key-bottom_navigation [data-testid="stRadioOption"] > div > div:first-child,
 .st-key-bottom_navigation label > div:first-child:not(:last-child) {display:none !important;}
 
@@ -309,9 +309,11 @@ div[class*="st-key-quest_row_"]:hover, div[data-testid="stMetric"]:hover, div[da
 div.stButton > button, div.stFormSubmitButton > button {transition:transform .18s ease, box-shadow .18s ease, background .18s ease;}
 div.stButton > button:hover, div.stFormSubmitButton > button:hover {transform:translateY(-2px); box-shadow:0 10px 20px -12px rgba(212,85,31,.7);}
 div.stButton > button:active, div.stFormSubmitButton > button:active {transform:scale(.97);}
-.st-key-bottom_navigation [role="radiogroup"] label {transition:background .2s ease, transform .2s ease, color .2s ease;}
-.st-key-bottom_navigation [role="radiogroup"] label:hover {background:#FFF1E6; transform:translateY(-1px);}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked):hover {background:#FFD5BC;}
+.st-key-bottom_navigation [role="radiogroup"] label {transition:background .2s ease, color .2s ease;}
+.st-key-bottom_navigation [role="radiogroup"] label:hover {background:#FFF7F0; transform:none; box-shadow:none;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked):hover,
+.st-key-bottom_navigation [role="radiogroup"] label:active {background:#FFF1E6; transform:none; box-shadow:none;}
+.st-key-bottom_navigation [role="radiogroup"] label[data-focus-visible="true"] {outline:2px solid #E8CFC0; outline-offset:2px;}
 .lq-pillar .lq-ico {transition:transform .3s cubic-bezier(.2,1.4,.4,1);}
 .lq-pillar:hover .lq-ico {transform:rotate(-8deg) scale(1.1);}
 .lq-heat .grid i {transition:transform .15s ease;}
