@@ -133,7 +133,7 @@ Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs checks/*.test.cj
 - API errors are converted to user-friendly messages without exposing raw database details.
 - `tests/test_token_refresh.py` covers token rotation and refresh failures.
 - `tests/test_api_errors.py` covers malformed responses and safe error messages.
-- The latest local Python test run passed 222 tests (23 November 2026).
+- The latest local Python test run passed 223 tests (23 November 2026).
 
 ### Security verification still required
 

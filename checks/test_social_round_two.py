@@ -116,3 +116,11 @@ def test_active_competition_renders_live_standings_and_score_form(backend):
  assert any('Your total' in n.label for n in at.number_input)
  assert any(e.label=='Scoring & deadlines' for e in at.expander)
  assert 'Confirmed weekly XP' in ' '.join(m.value for m in at.markdown)
+
+
+def test_free_ai_plain_text_reflection_is_validated_too(monkeypatch):
+ message="You have taken a step toward your walking habit, with your first and latest completed target at 8,000 steps. The next target invites you to aim for 10,000 steps. A manageable next step could be a short walk to build on today's activity."
+ replies=[{'data':[{'id':ai_quests.FREE_MODEL,'input_price':0,'output_price':0}]},
+          {'choices':[{'finish_reason':'stop','message':{'content':message}}]}]
+ monkeypatch.setattr(ai_quests,'urlopen',lambda *a,**k:io.BytesIO(json.dumps(replies.pop(0)).encode()))
+ assert ai_quests.generate_progress_message('fixture',{'first':8000,'latest':8000,'next':10000})==message

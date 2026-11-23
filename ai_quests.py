@@ -228,7 +228,18 @@ def generate_progress_message(api_key, evidence, language='en'):
             choice=json.load(response)['choices'][0]
         if choice.get('finish_reason')!='stop' or choice['message'].get('refusal'):
             raise ValueError('incomplete')
-        message=json.loads(choice['message']['content'])['message']
+        content=choice['message']['content']
+        if not isinstance(content,str):
+            raise ValueError('missing reflection')
+        try:
+            decoded=json.loads(content)
+            message=decoded.get('message') if isinstance(decoded,dict) else decoded
+        except ValueError:
+            if content.lstrip().startswith(('{','[','```')):
+                raise ValueError('malformed reflection')
+            # Some free providers ignore JSON mode but return a useful plain-text reflection.
+            # It passes the same length, numeric-evidence and perspective checks below.
+            message=content
         if not isinstance(message,str) or not 20<=len(message.strip())<=650:
             raise ValueError('length')
         def numbers(value):

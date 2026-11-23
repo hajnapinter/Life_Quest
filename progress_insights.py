@@ -144,7 +144,7 @@ def render_insights(rows,language):
     from ai_quests import generate_progress_message,QuestGenerationError
     evidence=progress_evidence(rows)
     message=None
-    fingerprint=hashlib.sha256(json.dumps(['reflection-v2',language,evidence],sort_keys=True).encode()).hexdigest()
+    fingerprint=hashlib.sha256(json.dumps(['reflection-v3',language,evidence],sort_keys=True).encode()).hexdigest()
     cache=st.session_state.setdefault('progress_reflections',{})
     if fingerprint in cache:
         message=cache[fingerprint]

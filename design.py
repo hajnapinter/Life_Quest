@@ -113,8 +113,9 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
 .st-key-bottom_navigation [role="radiogroup"] > div {width:100%%; min-width:0;}
 .st-key-bottom_navigation [role="radiogroup"] label {width:100%%; white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
   color:%(muted)s; font-weight:500; transition:background .2s ease;}
-.st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; text-align:center;}
-.st-key-bottom_navigation [role="radiogroup"] label p {color:#1C1720; font-weight:600; text-align:center; font-size:11px; line-height:1.3; overflow-wrap:anywhere;}
+.st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; display:flex; justify-content:center; text-align:center;}
+.st-key-bottom_navigation [role="radiogroup"] label [data-testid="stMarkdownContainer"] {width:100%%; text-align:center;}
+.st-key-bottom_navigation [role="radiogroup"] label p {color:#1C1720; font-weight:600; text-align:center; font-size:13px; line-height:1.3; overflow-wrap:anywhere;}
 div[class*="st-key-pillar_link_"] button p {font-size:1.15rem; font-weight:600;}
 div[class*="st-key-pillar_link_"] button {padding-left:0;}
 .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#FFE3D1; color:%(ink)s; box-shadow:inset 0 -3px 0 %(action)s;}
