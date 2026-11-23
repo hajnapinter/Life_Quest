@@ -28,7 +28,7 @@ Precedence: what the team asks for in the current task wins, then this file, the
 | Surface | `#FFFFFF` | cards, quest rows, tiles, inputs, nav bar |
 | Ink | `#2B2330` | all body text and headings |
 | Muted | `#7A6E7E` | captions, eyebrows, secondary labels |
-| Action | `#D4551F` | `primaryColor`: primary buttons, checkboxes, toggles, selected nav item. White text on it passes contrast. |
+| Action | `#D4551F` | `primaryColor`: primary buttons, checkboxes, toggles, selected nav item. Audit finding: white text on this colour is about 4.10:1, below AA for normal-sized text; palette correction remains pending (see provider-review-2026-11-23.md). |
 | Glow | `#FF8A4C` | bright orange for fills, highlights, shadows. **Never** as a text colour or as a button background with white text (fails contrast). |
 | Growth | `#7CC394` | the sprout, success moments |
 | Line | `#F1E4DA` | hairline borders on inputs and tables |

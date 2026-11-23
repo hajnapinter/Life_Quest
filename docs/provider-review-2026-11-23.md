@@ -27,7 +27,7 @@ However, a local quest library already exists, so external AI is not the only wa
 
 Brevo shows the earlier confirmation to the controller's university address as **Delivered** at the dashboard's displayed 23 November 00:40. An Outlook all-folder sender search found no matching result; the Junk folder's only visible message was unrelated. Microsoft Defender's user quarantine showed **0 items**, also after including blocked senders. These checks do not expose tenant-wide administrator quarantine or mail-flow rules.
 
-A fresh confirmation resend was requested from the live app to the previously authorised university address. The neutral success response alone does not prove a new message was generated (confirmed accounts need no new signup confirmation). Check the provider log after that request before claiming a second delivery. Inbox receipt remains unproven; no sender allow-list, anti-phishing policy or institutional filter was weakened.
+A read-only Auth query confirmed that the university account exists and remains unconfirmed. A fresh confirmation resend was requested from the live app to the previously authorised university address. The neutral success response alone does not prove a new message was generated (confirmed accounts need no new signup confirmation). The refreshed Brevo view returned no log rows for the inspected period, so it did not supply fresh delivery evidence; do not claim a second delivery. Inbox receipt remains unproven; no sender allow-list, anti-phishing policy or institutional filter was weakened.
 
 Ready-to-send **manual** university IT request (not sent):
 
@@ -39,10 +39,18 @@ Ready-to-send **manual** Requesty enquiry (not sent):
 
 ## Accessibility findings to resolve separately
 
-All six signed-in screens were measured at 390px: no horizontal page overflow, no app exception, no missing names among visible form fields, and no images missing an alt attribute. Navigation is keyboard-operable and uses two rows of three targets, each about 117×33px. This is not a full assistive-technology certification.
+All six signed-in screens were measured at both 390px and 1280px: no horizontal page overflow, no app exception, no missing names among visible form fields, and no images missing an alt attribute. Navigation is keyboard-operable and uses two rows of three targets, each about 117×33px. This is not a full assistive-technology certification.
 
 Remaining findings: Home has an H3 but no H1; the navigation focus outline `#E8CFC0` on white measures about **1.49:1**, making keyboard focus too subtle; the design guide's claim that white text on Action `#D4551F` passes normal-text contrast is incorrect (about **4.10:1**, below 4.5:1 for ordinary-sized text). Regular navigation text `#55444F` on selected peach is about **8.16:1**; muted text on the page is about **4.61:1**. These palette/heading changes were not mixed into the requested session repair. Reference: [WCAG text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) and [focus appearance](https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html), the latter a Level AAA criterion. A full VoiceOver/NVDA walkthrough and physical-device testing still require separate execution.
 
 ## Human steps
 
 Repository and app walkthrough have been prepared and the browser tour repeated. Team members still need to practise explaining the code themselves. The repository remains private, and Moodle submission remains prohibited by the user's instruction. The published privacy mailbox must be monitored by a person; the assistant has not created an ongoing monitoring obligation or automation.
+
+## Requested remembered-login change: live result
+
+Only a project-scoped rotating refresh credential is persisted for up to 30 days since authenticated renewal; access tokens remain server-side. Browser/server expiry can shorten this period. Legacy tab storage migrates after verification, blocked persistent storage falls back to tab storage, logout clears both, and transient errors preserve a retry path. A pending OAuth callback bypasses old-session restoration to avoid both a PKCE remount race and restoring the wrong prior account.
+
+Production checks passed: three consecutive refreshes without a login form; an independently opened Chrome tab restored the account; logout stayed logged out after refresh and signed out the other Chrome tab; Google sign-in succeeded again; after the OAuth-priority correction, Google sign-in also succeeded in the in-app browser, and its original app tab restored without login after refresh. The account data/XP were unchanged. No browser-wide quit was performed. These are observed reload/new-tab results, not a guarantee after explicit logout, private-mode closure, storage clearing or server revocation.
+
+Automated output: **238 Python passed in 17.82s; 8 JavaScript passed, 0 failed**. Source CI [45176684567](https://github.com/hajnapinter/Life_Quest/actions/runs/45176684567) passed including the dependency audit. The active AI model remained unchanged, as requested.
