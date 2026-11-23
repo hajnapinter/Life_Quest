@@ -24,7 +24,8 @@ def rpc(config,name,payload):
                     headers={'apikey':config['SUPABASE_ANON_KEY'],'Content-Type':'application/json'},
                     data=json.dumps({'worker_key':config['REMINDER_WORKER_KEY'],**payload}).encode(),method='POST')
     with urlopen(request,timeout=20) as response:
-        return json.load(response)
+        body=response.read()
+        return json.loads(body) if body.strip() else None
 
 
 def message(recipient,config):
@@ -41,6 +42,7 @@ def message(recipient,config):
 def run(config,check_only=False):
     if not check_only:
         rpc(config,'settle_due_competitions',{})
+        print('Competition settlement completed.')
     with smtplib.SMTP(config['SMTP_HOST'],int(config.get('SMTP_PORT','587')),timeout=20) as smtp:
         smtp.ehlo(); smtp.starttls(context=ssl.create_default_context()); smtp.ehlo()
         smtp.login(config['SMTP_USERNAME'],config['SMTP_PASSWORD'])

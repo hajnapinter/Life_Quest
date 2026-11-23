@@ -128,3 +128,14 @@ def test_reminder_copy_is_localized_and_headers_reject_injection():
     assert 'prochain' in mail['Subject'] and 'Paramètres' in mail.get_content()
     with pytest.raises(ValueError):
         worker.message({**recipient,'email':'recipient@example.com\nBcc: other@example.com'},config)
+
+
+@pytest.mark.parametrize('body,expected',[(b'',None),(b'null',None),(b'[]',[])])
+def test_reminder_rpc_accepts_successful_empty_void_response(monkeypatch,body,expected):
+    import io
+    path=Path(__file__).resolve().parents[1]/'scripts/send_reminders.py'
+    spec=importlib.util.spec_from_file_location('reminder_rpc',path)
+    worker=importlib.util.module_from_spec(spec);spec.loader.exec_module(worker)
+    monkeypatch.setattr(worker,'urlopen',lambda *a,**k:io.BytesIO(body))
+    config={'SUPABASE_URL':'https://fixture.supabase.test','SUPABASE_ANON_KEY':'fixture','REMINDER_WORKER_KEY':'fixture'}
+    assert worker.rpc(config,'settle_due_competitions',{})==expected
