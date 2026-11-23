@@ -63,3 +63,5 @@ Scores and real-life completion are self-reported. Daily and weekly competitions
 After the existing SQL migrations (including social play and security hardening), apply `supabase/product-fixes.sql`, then `supabase/reminders.sql`. Both are installed on the shared project. New deployments also need the private Actions Secrets and worker hash described in [reminders.md](reminders.md). Never store SMTP credentials in source or use a service-role key.
 
 Apply `supabase/weekly-leaderboard.sql` last, after the product/reminder migrations. Never rerun an earlier RPC migration afterward without reapplying this final migration. Manual rollback checks: `supabase/check-weekly-leaderboard.sql`.
+
+Privacy: apply `supabase/privacy.sql` after `supabase/weekly-leaderboard.sql`, then run `supabase/check-privacy.sql`. The first installs an owner-only procedure; the second rolls back synthetic test data. See [privacy operations](privacy-operations.md).

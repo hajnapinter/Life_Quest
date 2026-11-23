@@ -197,3 +197,7 @@ The six navigation destinations have plain centered labels. Competition places a
 Leaderboard includes every account and refreshes every 30 seconds. At the end of each UTC week, positive-XP participants in the top three receive 100/50/25 XP once. Ties and prize exclusion rules are explained on the page. SQL: `supabase/weekly-leaderboard.sql` (apply last). First eligible prize week starts on installation, with no retroactive prizes.
 
 Habit expanders have broad names, recorded starting/latest targets, the next task, purpose and long-term direction. The progress card uses the verified free AI model for a motivational reflection grounded in recorded activities, with a labeled local fallback. Settings omits city and personalization editing while keeping saved onboarding answers.
+
+## Privacy and account requests
+
+Read the public [Privacy Policy](https://life-quest-team.streamlit.app/?privacy=1) (also linked on login and in Settings), or its [English source](docs/privacy-en.md). Portuguese, French and German are available in the app. Controller: Hajna Pinter, 81324@novasbe.pt. Rights and deletion requests are user-sent emails, not automatic account deletion. Administrators must follow [the privacy runbook](docs/privacy-operations.md). Provider agreements and international transfers still require controller review before claiming GDPR compliance.

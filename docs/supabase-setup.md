@@ -82,3 +82,5 @@ Google's verified identity does not need a separate Supabase signup email.
 - https://supabase.com/docs/guides/auth/social-sign-in/auth-google
 - https://supabase.com/docs/guides/auth/sessions/pkce-flow
 - https://supabase.com/docs/reference/javascript/auth-resend
+
+Privacy: apply `supabase/privacy.sql` after `supabase/weekly-leaderboard.sql`, then run `supabase/check-privacy.sql`. The first installs an owner-only procedure; the second rolls back synthetic test data. See [privacy operations](privacy-operations.md).

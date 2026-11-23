@@ -27,6 +27,7 @@ from browser_session import sync_session
 from personalization import render_preferences
 from reminder_settings import render_reminder_settings
 from invitations import capture_invitation, render_invitation, valid_invitation
+from privacy import render_privacy_link, render_privacy_controls, render_privacy_page
 
 
 st.set_page_config(page_title="Life Quest", page_icon="🌱", layout="centered")
@@ -378,6 +379,7 @@ def render_auth() -> None:
         if st.button("Create a new account"):
             navigate_auth("signup")
     render_confirmation_help()
+    render_privacy_link()
 
 
 def load_user_data() -> bool:
@@ -784,6 +786,7 @@ def render_settings() -> None:
         st.subheader(text["notifications"])
         render_reminder_settings(api_request)
         render_push_setting(api_request,lang)
+        render_privacy_controls()
 
         if st.button(t("logout"), width="stretch"):
             # Revoke the refresh token on Supabase too, not just in this browser session.
@@ -867,6 +870,11 @@ def render_dashboard() -> None:
 
 initialise_state()
 capture_invitation()
+
+# A public notice must remain readable without an account or configured services.
+if st.query_params.get("privacy") == "1":
+    render_privacy_page()
+    st.stop()
 
 if supabase_config() is None:
     st.error("Supabase is not configured for this deployment.")
