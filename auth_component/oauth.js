@@ -2,7 +2,8 @@
 const button = document.getElementById('google');
 const status = document.getElementById('status');
 let args, processedCode, busy = false;
-const parentOrigin = new URL(document.referrer || window.location.href).origin;
+// Only talk to the app's own origin: a page that frames this component elsewhere gets nothing.
+const parentOrigin = new URL(window.location.href).origin;
 function send(type, extra = {}) {
   window.parent.postMessage({isStreamlitMessage: true, type, ...extra}, parentOrigin);
 }

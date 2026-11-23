@@ -198,7 +198,7 @@ def render_squads(api, state):
 
                     with st.container(key='quest_row_team_' + quest['id']):
                         st.checkbox(
-                            translated_title,
+                            plain_markdown(translated_title),
                             key=key,
                             disabled=mine or len(squad['members']) < 2,
                             on_change=queue_squad_confirmation,
@@ -361,7 +361,7 @@ def render_competitions(api,state):
 
             if current and not closed:
                 scores={s['user_id']:s['value'] for s in current['scores']}
-                st.markdown('**'+quest_text(current['title'])+'**')
+                st.markdown('**'+plain_markdown(quest_text(current['title']))+'**')
                 st.caption(tx('Today · ','Hoje · ','Aujourd\'hui · ','Heute · ')+state['today']+tx(' · the exact same quest for both of you',
                            ' · exatamente a mesma missão para os dois',' · exactement la même quête pour vous deux',' · genau dieselbe Quest für euch beide'))
                 st.write(tx('Your result: ','O teu resultado: ','Ton résultat : ','Dein Ergebnis: ')+'**'+str(scores.get(uid,not_submitted))+'** · '

@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 import streamlit as st
+from auth_helpers import plain_markdown
 from ai_quests import generate_slot_quests, QuestGenerationError
 from onboarding import PILLARS
 from quest_plan import slot_plan, pillar_statistics, TRACKS, clean_title, EXPERIENCE_FOCUSES, progress_hint, weekly_recap, completed_csv
@@ -226,7 +227,7 @@ def render_quest_cards(api, rows, category, limit=5):
     titles=display_titles(active)
     for quest, title in zip(active, titles):
         with st.container(key='quest_row_'+quest['id']):
-            st.checkbox(title,key='quest_check_'+quest['id'],on_change=queue_completion,args=(quest['id'],))
+            st.checkbox(plain_markdown(title),key='quest_check_'+quest['id'],on_change=queue_completion,args=(quest['id'],))
             hint=progress_hint(quest,rows)
             if hint:
                 st.markdown(trend_html(*hint),unsafe_allow_html=True)

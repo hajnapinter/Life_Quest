@@ -1,5 +1,6 @@
 /* Remember only a rotating refresh credential; Supabase re-verifies it on every restore. */
-const parentOrigin = new URL(document.referrer || window.location.href).origin;
+// Only talk to the app's own origin: a page that frames this component elsewhere gets nothing.
+const parentOrigin = new URL(window.location.href).origin;
 const MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 let readSent = false, clearSent = false, lastWritten = null, activeKey = null;
 function send(type, extra = {}) {

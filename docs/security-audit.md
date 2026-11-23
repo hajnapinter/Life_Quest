@@ -101,3 +101,14 @@ Added an anonymously accessible four-language notice and explicit user-sent righ
 The latest session implementation supersedes the earlier tab-only description: only a rotating refresh credential is stored in project-scoped localStorage for up to 30 days after an authenticated renewal, with sessionStorage fallback. Server-verified token rotation and a separate `/auth/v1/user` identity check precede profile access. Logout clears both stores and propagates to other tabs. Browser storage remains exposed to same-origin script injection; no access token is persisted and no token is placed in a URL. Startup hides the login while restoration is pending; transient failures offer retry without discarding the saved credential. New tests cover expiry, corruption, project separation, new tabs, blocked storage, logout propagation and retry with the same browser response. AI provider, privacy and email findings are summarised in [verification.md](verification.md).
 
 Final remembered-login verification: 238 Python and 8 JS checks passed. Live three-refresh/new-tab restoration and logout/reload/other-tab sign-out passed. Explicit OAuth callbacks bypass stored-session restore; this prevents a callback being displaced by an old account or remounting mid-exchange. Google reauthentication and original in-app-tab restoration were both observed after the correction.
+
+## Follow-up review (23 November 2026)
+
+A second review covered the code and SQL added after the first audit: remembered sign-in, the Google sign-in component, invitation links, all custom HTML, query parameters, the reminder worker and its workflows, and every database function and policy. It also probed the live database as an anonymous visitor (read-only).
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| M4 | The sign-in components took their parent's address from `document.referrer`. A page on another site that framed a component could have asked it for the saved sign-in credential, or planted its own (in browsers that do not separate storage per site). | Medium | Fixed: `session.js` and `oauth.js` now only talk to the app's own origin. |
+| L9 | AI-written and AI-translated quest titles were shown as Markdown, so a malicious title could display a link or tracking image. | Low | Fixed: titles go through `plain_markdown`, like other users' names. |
+
+Confirmed sound: anonymous visitors can read no table on the live database (12 refuse, 6 return no rows); Row Level Security is on for all 18 tables; every security-definer function fixes `search_path` and either checks `auth.uid()` or is closed to app users; the reminder worker's functions need a 32+ character key, stored only as a SHA-256 hash; session restore re-verifies identity with Supabase; invitation links never join without a click; reminder emails are plain text; workflows have read-only repository permissions.
