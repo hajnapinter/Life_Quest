@@ -58,7 +58,8 @@ def test_ai_evidence_excludes_identity_and_unfinished_claims():
 
 @pytest.mark.parametrize('message,allowed',[
  ('You moved from 8000 to 10000 recorded steps. Keep the next walk comfortable.',True),
- ('You have lost 15 kilograms and saved 999 euros. Keep it up!',False)])
+ ('You have lost 15 kilograms and saved 999 euros. Keep it up!',False),
+ ('I moved from 8000 to 10000 steps and I am proud of myself.',False)])
 def test_free_ai_reflection_rejects_unsupported_numbers(monkeypatch,message,allowed):
  replies=[{'data':[{'id':ai_quests.FREE_MODEL,'input_price':0,'output_price':0}]},
           {'choices':[{'finish_reason':'stop','message':{'content':json.dumps({'message':message})}}]}]
