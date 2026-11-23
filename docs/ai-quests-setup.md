@@ -36,7 +36,7 @@ Validation included mocked UI tests for replacement and pillar isolation, all 35
 
 ## Data and limitations
 
-Pillar, numeric level, recent quest text, ratings, city/country, target language and preferred session length go to Requesty and the model host. Name, email and user ID are not included. Provider retention and training policies can differ; review the model's data policy before public release. The UI tells users which service receives these answers.
+Pillar, numeric level, recent quest text, ratings, city/country, target language and a default session length (20 min, no longer asked) go to Requesty and the model host. Name, email and user ID are not included. Provider retention and training policies can differ; review the model's data policy before public release. The UI tells users which service receives these answers.
 
 RLS isolates users' quest histories. Completion remains self-reported. Direct inserts are revoked, but the authenticated slot RPC accepts client-supplied content and difficulty; this remains a self-improvement app, not an anti-cheating system for adversarial competition. A trusted generation backend would be needed for that use case.
 

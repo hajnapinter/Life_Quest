@@ -2,6 +2,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import json
+import logging
 import time
 import hashlib
 import threading
@@ -287,10 +288,17 @@ def render_google_login() -> None:
     redirect = app_redirect_url()
     code = st.query_params.get("code")
     if st.query_params.get("error"):
-        auth_notice("Google sign-in was cancelled or could not be completed. Please try again.", "warning")
+        # Keep Google/Supabase's reason in the server log only (never shown raw to users).
+        reason = str(st.query_params.get("error_description") or st.query_params.get("error"))[:300]
+        logging.getLogger("lifequest.auth").warning("Google sign-in returned an error: %s", reason)
+        auth_notice("We couldn't finish Google sign-in. New to Life Quest? Create your account here, "
+                    "with Google or with your email.", "warning")
         for key in ("error", "error_description", "error_code"):
             if key in st.query_params:
                 del st.query_params[key]
+        if st.query_params.get("auth") != "signup":
+            st.query_params["auth"] = "signup"   # send them to account creation, not back to log in
+            st.rerun()
     enabled = bool(config and redirect and google_available(config[0]))
     if not enabled and not code:
         st.button("Continue with Google", disabled=True)

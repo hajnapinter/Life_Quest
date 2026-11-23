@@ -74,7 +74,8 @@ def render_restore_status(status):
     """Keep restore/retry separate from an explicit request to sign in again."""
     text=RESTORE_TEXT.get(st.session_state.get('language','en'),RESTORE_TEXT['en'])
     if status=='pending':
-        st.info(text[0])
+        from design import splash
+        splash(hold=True,label=text[0])   # sprout loading screen instead of a flash of the login page
     elif status=='retry':
         st.warning(text[1])
         if st.button(text[2],key='retry_saved_session'):

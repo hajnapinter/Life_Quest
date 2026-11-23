@@ -68,13 +68,8 @@ def render_preference_fields(preferences,key,language,has_languages=False):
     goal=st.selectbox(tr(('Language you want to learn','Língua que queres aprender','Langue que tu veux apprendre','Sprache, die du lernen möchtest'),language),
                       options,index=options.index(prefs['target_language']),key=key+'_target_language',
                       format_func=lambda code:tr(LANGUAGE_NAMES[code],language) if code else tr(('Choose a language','Escolhe uma língua','Choisis une langue','Wähle eine Sprache'),language)) if has_languages else prefs['target_language']
-    minutes=st.selectbox(tr(('Preferred session length','Duração preferida de uma sessão','Durée de séance préférée','Bevorzugte Dauer einer Einheit'),language),
-                         [10,20,30,60],index=[10,20,30,60].index(prefs['minutes']),key=key+'_minutes',format_func=lambda n:f'{n} min')
-    st.caption(tr(('Your city adapts local quests and currency. Numeric targets and difficulty stay unchanged.',
-                   'A tua cidade adapta as missões locais e a moeda. Os objetivos numéricos e a dificuldade mantêm-se.',
-                   'Ta ville adapte les quêtes locales et la monnaie. Les objectifs chiffrés et la difficulté restent identiques.',
-                   'Deine Stadt passt lokale Quests und die Währung an. Zahlenziele und Schwierigkeit bleiben unverändert.'),language))
-    return {'target_language':goal,'minutes':minutes}
+    # Session length is no longer asked: it never changed a quest. The stored value (default 20) is kept.
+    return {'target_language':goal,'minutes':prefs['minutes']}
 
 
 def render_preferences(api,language):

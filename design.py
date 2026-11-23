@@ -76,7 +76,7 @@ div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {display:none;
 div[class*="st-key-quest_row_"], div[class*="st-key-team_row_"] {
   background:%(surface)s; border-radius:18px; padding:10px 14px;
   box-shadow:0 6px 16px -12px rgba(43,35,48,.45);
-  animation:quest-enter .35s ease-out both; transition:opacity .2s ease, transform .2s ease;}
+  transition:opacity .2s ease, transform .2s ease;}  /* no entrance animation: rows appear with the rest of the page */
 div[class*="st-key-quest_row_"]:hover {box-shadow:0 10px 22px -14px rgba(212,85,31,.55);}
 div[class*="st-key-quest_row_"]:has(input:checked:not(:disabled)) {opacity:.4; transform:translateY(-4px); pointer-events:none;}
 div[class*="st-key-quest_row_"] label {width:100%%; cursor:pointer;}
@@ -99,7 +99,8 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
 
 @media(max-width:480px) {
  .st-key-bottom_navigation {border-radius:22px !important;}
- .st-key-bottom_navigation [role="radiogroup"] {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+ .st-key-bottom_navigation [role="radiogroup"] {display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; justify-content:stretch;}
+ .st-key-bottom_navigation [role="radiogroup"] label {padding:8px 3px !important;}
  .stMainBlockContainer {padding-bottom:184px !important;}
 }
 /* ---------- Floating bottom navigation ---------- */
@@ -109,11 +110,12 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
   width:min(680px, calc(100%% - 24px)); background:%(surface)s; border-radius:999px;
   padding:6px; box-shadow:0 14px 34px -14px rgba(43,35,48,.45);}
 .st-key-bottom_navigation [data-testid="stElementContainer"], .st-key-bottom_navigation [data-testid="stRadio"] {width:100%% !important;}
-.st-key-bottom_navigation [role="radiogroup"] {width:100%% !important; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px;
-  overflow:visible;}
+.st-key-bottom_navigation [role="radiogroup"] {width:100%% !important; display:flex; flex-wrap:nowrap; justify-content:space-evenly; gap:2px;
+  overflow:visible;}  /* items sized to their label, equal space between them */
+.st-key-bottom_navigation [role="radiogroup"] > div {flex:0 0 auto;}
 .st-key-bottom_navigation [role="radiogroup"]::-webkit-scrollbar {display:none;}
-.st-key-bottom_navigation [role="radiogroup"] > div {width:100%%; min-width:0;}
-.st-key-bottom_navigation [role="radiogroup"] label {width:100%%; white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
+.st-key-bottom_navigation [role="radiogroup"] > div {width:auto; min-width:0;}
+.st-key-bottom_navigation [role="radiogroup"] label {width:100%%; white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 12px; margin:0;
   color:#55444F; font-weight:400; box-shadow:none; transition:background .2s ease;}
 .st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; display:flex; justify-content:center; text-align:center;}
 .st-key-bottom_navigation [role="radiogroup"] label [data-testid="stMarkdownContainer"] {width:100%%; text-align:center;}
@@ -132,7 +134,7 @@ div[class*="st-key-pillar_link_"] button {padding-left:0;}
 
 .st-key-onboarding {max-width:720px; margin:0 auto;}
 .st-key-onboarding [class*="st-key-pickcard_"] {background:%(surface)s; border-radius:18px; padding:12px 16px 10px; height:100%%;
-  box-shadow:0 6px 16px -12px rgba(43,35,48,.45); transition:transform .22s cubic-bezier(.2,.9,.3,1), box-shadow .22s ease, background .2s ease;}
+  box-shadow:0 6px 16px -12px rgba(43,35,48,.45); transition:transform .22s cubic-bezier(.2,.9,.3,1), background .2s ease;}
 .st-key-onboarding [class*="st-key-pickcard_"]:hover {transform:translateY(-3px); box-shadow:0 14px 28px -16px rgba(212,85,31,.55);}
 .st-key-onboarding [class*="st-key-pickcard_"]:has(input:checked) {background:#FFF1E6; box-shadow:inset 0 0 0 2px %(action)s;}
 .st-key-onboarding [class*="st-key-pickcard_"] div[data-testid="stCheckbox"] {background:none; box-shadow:none; padding:0; margin:0; transform:none !important;}
@@ -252,6 +254,7 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
     width:fit-content; max-width:100%%; margin:0 auto 10px;}
   .lq-hero {min-height:130px; padding:22px 26px;}
   .st-key-bottom_navigation [role="radiogroup"] label p {font-size:14px;}
+  .st-key-bottom_navigation [role="radiogroup"] {width:max-content !important;}  /* bar hugs its items evenly */
   .lq-hero h3 {font-size:2rem; max-width:18ch;}
   .lq-hero p {max-width:46ch;}
   .lq-sprout {width:150px; height:150px; right:24px;}
@@ -270,6 +273,9 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
 .lq-splash .dots {display:flex; gap:6px;}
 .lq-splash .dots i {width:7px; height:7px; border-radius:50%%; background:%(glow)s; animation:lq-dot 1s ease-in-out infinite;}
 .lq-splash .dots i:nth-child(2) {animation-delay:.15s;} .lq-splash .dots i:nth-child(3) {animation-delay:.3s;}
+/* Held version: stays until the app replaces it (e.g. while a saved sign-in is restored). */
+.lq-splash.hold {display:grid; animation:none;}
+.lq-sr {position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
 @keyframes lq-fade-out {to {opacity:0; visibility:hidden;}}
 @keyframes lq-pop {from {transform:scale(.4); opacity:0;} to {transform:none; opacity:1;}}
 @keyframes lq-draw {to {stroke-dashoffset:0;}}
@@ -291,7 +297,8 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
 @keyframes lq-fill {from {transform:scaleX(0);} to {transform:scaleX(1);}}
 
 /* ---------- Entrance: content rises in, staggered ---------- */
-.lq-hero, .lq-heat, .lq-podium .p, .lq-rank, div[data-testid="stMetric"], div[class*="st-key-card_"], .lq-pillar {
+/* The hero and quest rows have no entrance: on Home they would animate after the rest of the page had appeared. */
+.lq-heat, .lq-podium .p, .lq-rank, div[data-testid="stMetric"], div[class*="st-key-card_"], .lq-pillar {
   animation:lq-up .45s ease-out both;}
 .lq-podium .p:nth-child(2) {animation-delay:.08s;} .lq-podium .p:nth-child(3) {animation-delay:.16s;}
 .lq-rank:nth-of-type(2) {animation-delay:.05s;} .lq-rank:nth-of-type(3) {animation-delay:.1s;}
@@ -302,13 +309,13 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
 div[class*="st-key-quest_row_"], div[data-testid="stMetric"], div[data-testid="stExpander"] details,
 div[class*="st-key-card_"], .lq-podium .p, .lq-rank, .lq-chip, .lq-heat,
 .st-key-onboarding div[data-testid="stRadio"] label, .st-key-onboarding div[data-testid="stCheckbox"] {
-  transition:transform .22s cubic-bezier(.2,.9,.3,1), box-shadow .22s ease, background .2s ease;}
+  transition:transform .22s cubic-bezier(.2,.9,.3,1), background .2s ease;}  /* shadows change instantly: animating them is what made hovers lag */
 div[class*="st-key-quest_row_"]:hover, div[data-testid="stMetric"]:hover, div[data-testid="stExpander"] details:hover,
 .lq-podium .p:hover, .lq-rank:hover, .lq-chip:hover,
 .st-key-onboarding div[data-testid="stRadio"] label:hover, .st-key-onboarding div[data-testid="stCheckbox"]:hover {
   transform:translateY(-3px); box-shadow:0 14px 28px -16px rgba(212,85,31,.55);}
 .lq-podium .p.first:hover {transform:translateY(-5px) scale(1.02);}
-div.stButton > button, div.stFormSubmitButton > button {transition:transform .18s ease, box-shadow .18s ease, background .18s ease;}
+div.stButton > button, div.stFormSubmitButton > button {transition:transform .18s ease, background .18s ease;}
 div.stButton > button:hover, div.stFormSubmitButton > button:hover {transform:translateY(-2px); box-shadow:0 10px 20px -12px rgba(212,85,31,.7);}
 div.stButton > button:active, div.stFormSubmitButton > button:active {transform:scale(.97);}
 .st-key-bottom_navigation [role="radiogroup"] label {transition:background .2s ease, color .2s ease;}
@@ -324,7 +331,6 @@ div.stButton > button:active, div.stFormSubmitButton > button:active {transform:
 /* ---------- Idle life: the sprout breathes and sways ---------- */
 .lq-sprout {animation:lq-bob 3.4s ease-in-out infinite;}
 .lq-sprout i {transform-origin:bottom right; animation:lq-sway 2.8s ease-in-out infinite;}
-.lq-hero:hover .lq-sprout {animation-duration:1.6s;}
 @keyframes lq-bob {0%%,100%% {transform:translateY(0);} 50%% {transform:translateY(-6px);}}
 @keyframes lq-sway {0%%,100%% {transform:rotate(-12deg);} 50%% {transform:rotate(4deg);}}
 
@@ -348,6 +354,7 @@ div.stButton > button:active, div.stFormSubmitButton > button:active {transform:
   *, *::before, *::after {animation:none !important; transition:none !important;}
   div[class*="st-key-quest_row_"], .lq-podium .p, .lq-rank, div[data-testid="stMetric"] {transform:none !important;}
   .lq-splash {display:none;}
+  .lq-splash.hold .stem {stroke-dashoffset:0;} .lq-splash.hold .leaf {transform:none;} .lq-splash.hold .word {opacity:1;}
   .lq-goal .bar i {transform:none;}
 }
 </style>
@@ -522,11 +529,16 @@ def brand(label: str = "Life Quest") -> None:
                 unsafe_allow_html=True)
 
 
-def splash() -> None:
-    """Animated loading screen (sprout grows, then fades). Shown once per browser session by app.py."""
+def splash(hold: bool = False, label: str = "") -> None:
+    """Animated loading screen (sprout grows, then fades). Shown once per browser session by app.py.
+
+    hold=True keeps it on screen until the next rerun replaces it (used while a saved sign-in is
+    restored, so the login form never flashes); label is announced to screen readers.
+    """
+    status = f'<span class="lq-sr" role="status">{html.escape(label)}</span>' if label else ""
     st.markdown(
-        f'<div class="lq-splash" aria-hidden="true"><div class="in">{LOGO_SVG}'
-        '<div class="word">Life Quest</div><div class="dots"><i></i><i></i><i></i></div></div></div>',
+        f'<div class="lq-splash{" hold" if hold else ""}"><div class="in" aria-hidden="true">{LOGO_SVG}'
+        f'<div class="word">Life Quest</div><div class="dots"><i></i><i></i><i></i></div></div>{status}</div>',
         unsafe_allow_html=True,
     )
 

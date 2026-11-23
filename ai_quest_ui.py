@@ -375,6 +375,8 @@ def render_pillar(api, category):
                 weekdays={"en": ("M","T","W","T","F","S","S"), "pt": ("S","T","Q","Q","S","S","D"),
                           "fr": ("L","M","M","J","V","S","D"), "de": ("M","D","M","D","F","S","S")}.get(language, ("M","T","W","T","F","S","S")),
             )
+            # In the left column, so opening a habit on the right never pushes this card down.
+            render_insights(own,language)
     with right:
             st.subheader({
             "en": "Where you can grow next",
@@ -424,7 +426,6 @@ def render_pillar(api, category):
         )
 
                         st.write(f'{previous_label}: **{completed[-1]["target"]:,}** → {current_label}: **{plan["target"]:,}**')
-    render_insights(own,st.session_state.get('language','en'))
     st.subheader({
     "en": "Completed quests",
     "pt": "Missões concluídas",

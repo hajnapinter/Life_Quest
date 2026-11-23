@@ -72,7 +72,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 | Profile header | `profile_card(name, line, photo, ring)`: avatar (photo or initials), name, one muted line |
 | People in a squad | `member_chips(names)` |
 | Logo + "Life Quest" label at the top of a screen | `brand()` (sprout logo `LOGO_SVG`; tilts on hover) |
-| Loading screen | `splash()`: the sprout grows, then fades after ~1.5s; `app.py` shows it once per session |
+| Loading screen | `splash()`: the sprout grows, then fades after ~1.5s; `app.py` shows it once per session. `splash(hold=True, label=…)` stays until the next rerun (used while a saved sign-in is restored); the label is read to screen readers only |
 | Quest target changed since last time | `trend_html(direction, previous)` under the checkbox (`.lq-trend.up` green / `.down` orange) |
 | Counts per pillar | `pillar_bars(items)`: horizontal bars in each pillar's strong colour (used on the Recap page) |
 | Language selector | `i18n.language_picker(key)` (dashboard header and onboarding) |
@@ -81,8 +81,8 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 ## Motion
 
 The app should feel alive but calm. All motion lives in `design.py`:
-- **Entrance:** cards, tiles, podium and hero rise in (`lq-up`, ~0.45s), staggered by a few tens of ms.
-- **Hover:** anything clickable or card-like lifts 2–3px with a warm orange shadow; buttons press down (`scale(.97)`) on click; nav items get a peach background; pillar icons tilt.
+- **Entrance:** cards, tiles and podium rise in (`lq-up`, ~0.45s), staggered by a few tens of ms. The hero and quest rows have **no** entrance animation: on Home they would slide in after the rest of the page had already appeared, which looks like a glitch.
+- **Hover:** anything clickable or card-like lifts 2–3px with a warm orange shadow (only the lift is animated; the shadow changes instantly, because animating large shadows makes scrolling and hovering lag); buttons press down (`scale(.97)`) on click; nav items get a peach background; pillar icons tilt.
 - **Idle:** only the sprout moves (gentle bob and leaf sway). Nothing else loops.
 - Keep durations under 1s (except the splash) and use the existing easing. Every new animation must be switched off by the `prefers-reduced-motion` block (it already disables all animations and transitions globally).
 
@@ -93,8 +93,8 @@ Five quests are always kept ready per pillar. Users choose how many to **see** (
 ## Personalisation and navigation
 
 - All seven pillars and avatar rings are available to everyone. No subscription modes.
-- Six main navigation items, in this order: Home, Recap, Squad, Competition, Leaderboard, Settings. Labels have no emoji, use dark text and are centered. On narrow phones use two rows of three items. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
-- `places.py` searches cities via Photon. City, country, target language and preferred session length personalise quests through `personalization.py`; numeric progression stays in `quest_plan.py`.
+- Six main navigation items, in this order: Home, Recap, Squad, Competition, Leaderboard, Settings. Labels have no emoji, use dark text and are centered. Each item is sized to its label with equal space between items (so a long label like Competition never crowds its neighbour); on narrow phones use two rows of three equal items. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
+- `places.py` searches cities via Photon. City, country and target language personalise quests through `personalization.py` (session length is no longer asked: it never changed a quest); numeric progression stays in `quest_plan.py`.
 - Clearly disclose that location and preferences are sent to Requesty for generation; never send names or email addresses.
 - Daily opt-in email reminders use the hourly worker. Device notifications remain a test only.
 
@@ -132,7 +132,7 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 
 ## Multiplayer and progress review
 
-- Competition shows active pair standings and today's score form first, then invitation controls; the explanation ("A daily challenge. A weekly winner." and Scoring & deadlines) sits at the very bottom of the page. Confirmed XP and provisional same-day scores are explicitly distinguished; refresh every 30 seconds.
+- Competition shows active pair standings and today's score form first, then invitation controls; the "A daily challenge. A weekly winner." intro sits above the invitation controls, and Scoring & deadlines at the very bottom of the page. Confirmed XP and provisional same-day scores are explicitly distinguished; refresh every 30 seconds.
 - Squad uses a member-by-quest participation matrix on the left; the member ranking sits in the right desktop column and stacks on phones. Names and status cells must have accessible labels; never rely only on color.
 - Habit expanders use broad names from `habit_journey.habit_name`; inside, show recorded first/latest completed targets separately from the next target, a long-term direction and the purpose. Do not change progression.
 - Progress reflections use the verified free Requesty model with bounded activity evidence and no identity/location. Failures use a clearly labeled local encouragement, never pretend AI succeeded.
@@ -140,4 +140,4 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 
 Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus shows a 2px Action (`#BF4A1A`) outline, about 5:1 against the white bar, so keyboard users can always see where they are. Never use a pale outline (the old `#E8CFC0` was 1.49:1).
 
-During verified session restoration, hide only the auth form with `.st-key-auth_restoring` and show a translated restoration status. Do not flash a signed-out screen or hide the session component. Connection failures offer retry without discarding credentials.
+During verified session restoration, hide only the auth form with `.st-key-auth_restoring` and show the held sprout loading screen (`splash(hold=True)`) with a translated status for screen readers, so the login page never flashes. Do not flash a signed-out screen or hide the session component. Connection failures offer retry without discarding credentials.

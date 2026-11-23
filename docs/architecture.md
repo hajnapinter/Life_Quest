@@ -49,7 +49,7 @@ flowchart LR
 | XP awarded for social activity | `social_rewards` |
 
 **Supabase Auth user metadata** (a small JSON document attached to each login), for per-user settings that did not need new tables:
-`lifequest_onboarding` (answers, starting levels, quests shown per pillar), `lifequest_preferences` (target language and session length), `lifequest_language` (UI language), `lifequest_profile` (photo, avatar ring, notification preference).
+`lifequest_onboarding` (answers, starting levels, quests shown per pillar), `lifequest_preferences` (target language; an older session-length value is kept but no longer asked), `lifequest_language` (UI language), `lifequest_profile` (photo, avatar ring, notification preference).
 *Why:* the shared database was already set up, and adding columns means a migration for the whole team. *Limit:* the user can write their own metadata, so it must never decide anything security-relevant (see section 5).
 
 **Streamlit session state** (server memory, per browser tab): the login token and the current page. `browser_session.py` stores only the rotating refresh token in project-scoped localStorage for at most 30 days since an authenticated renewal, with a sessionStorage fallback. It restores and verifies identity with Supabase after reload or reopening the app. Logout clears both stores, notifies other tabs, and revokes the session. Private browsing or blocked storage can limit persistence. This is a browser credential, so script-injection prevention remains essential.
@@ -64,7 +64,7 @@ flowchart LR
 4. **Progression**: `quest_plan.slot_plan` makes the next quest a bit harder after a success and easier after "too hard", within fixed limits.
 5. **Squads**: create or join with an invite code; shared quests need two confirmations; the Squad page ranks members by this week's XP.
 6. **Weekly recap**: quests and XP since Monday vs last week, a per-pillar breakdown, the best day, and a CSV export including personal quests, multiplayer completions and XP bonuses. Exact awarded XP is recorded separately from nominal points; weekly bonuses add XP without counting as extra quests.
-7. **Settings**: all pillars, quests shown per pillar, city, target language, preferred session length, photo, avatar rings and scheduled email preferences.
+7. **Settings**: pillars, quests shown per pillar, photo, avatar rings, language and scheduled email preferences. City and target language are chosen in onboarding.
 
 Each quest whose target changed since the last time shows a small line such as "↑ up from 4,000 last time", which makes the adaptive difficulty visible.
 

@@ -401,6 +401,12 @@ def render_competitions(api,state):
                         act(api,'close_friend_duel',{'pair_id':pair['id'],'action':'end'},
                             tx("Competition will end after today.","A competição termina após hoje.","Le défi se termine après aujourd'hui.","Der Wettbewerb endet nach heute."))
 
+    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
+                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
+    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
+                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
+                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
+                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
     with st.expander(tx('Challenge a friend','Desafiar um amigo','Défier un ami','Freund herausfordern'),expanded=not state['duels']):
 
         friends={f['id']:f['name'] for f in state['friends']}
@@ -447,13 +453,7 @@ def render_competitions(api,state):
                                      'Tes défis apparaîtront ici dès que tu auras invité un ami.',
                                      'Deine Wettbewerbe erscheinen hier, sobald du einen Freund einlädst.'))
 
-    # How the competition works: kept at the bottom so results and actions come first.
-    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
-                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
-    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
-                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
-                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
-                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
+    # Scoring rules: kept at the bottom so results and actions come first.
     with st.expander(tx('Scoring & deadlines','Pontuação e prazos','Points et délais','Punkte und Fristen')):
         st.write(tx('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.',
                       'Os resultados são declarados por cada um e podem ser editados até ao fim do dia, UTC. As semanas vão de segunda a domingo.',
