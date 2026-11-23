@@ -203,14 +203,15 @@ def trend_html(direction, previous):
 def display_titles(quests):
     language=st.session_state.get('language','en')
     current=clean_preferences(st.session_state.user.get('user_metadata',{}).get('lifequest_preferences'))
-    result=[None]*len(quests); translate=[]; positions=[]
+    result=[None]*len(quests); translate=[]; positions=[]; source_languages=[]
     for i,quest in enumerate(quests):
         context=quest.get('context') if isinstance(quest.get('context'),dict) else {}
         if context.get('variety_version')==1 and quest.get('source')=='curated':
             result[i]=render_variant(quest,context,context.get('location',''),language)
         else:
             positions.append(i);translate.append(clean_title(quest.get('title',''),quest.get('target')))
-    for i,title in zip(positions,quest_texts(translate)):
+            source_languages.append(context.get('text_language'))
+    for i,title in zip(positions,quest_texts(translate, source_languages=source_languages)):
         quest=quests[i];context=quest.get('context') if isinstance(quest.get('context'),dict) else {}
         if context.get('variety_version')==1 or (not context and quest.get('status')=='completed'):
             result[i]=title

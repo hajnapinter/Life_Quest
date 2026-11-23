@@ -161,6 +161,12 @@ Custom AI titles use the same verified zero-cost Requesty model for translation,
 with cached results and numeric-target validation. If that service is unavailable,
 the original custom text remains visible with a translated explanation; a different
 task is never silently substituted. Translation sends only quest text, not profiles.
+New AI quests store their generation language in `context.text_language`, so
+showing them in that same language needs no translation request. Legacy English
+titles with recognisable English instruction wording also work offline; ambiguous
+older titles still use translation rather than assuming they are English. Successful
+batches are retained if another batch fails, and a failed provider request starts a
+60-second cooldown shared by the selected language across all quest rows.
 
 ## Product fixes and scheduled background work (23 November)
 

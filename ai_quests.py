@@ -81,6 +81,9 @@ changes wording and activity choice only: numeric progression and difficulty sta
         result=json.loads(choice['message']['content'])
         validated=validate_batch(result,plans)
         for quest in validated:
+            # This is server-owned metadata, never a language claimed by the model.
+            quest['context'] = {**quest.get('context', {}),
+                                'text_language': language if language in language_names else 'en'}
             recent=[q for q in history if q.get('slot')==quest['slot'] and q.get('status') in ('completed','skipped')][-2:]
             # Changing only a number is not a fresh activity. Retain the varied local fallback instead.
             signature=lambda text:re.sub(r'\d+(?:[, .]\d{3})*','{n}',str(text).casefold()).strip(' .!')
