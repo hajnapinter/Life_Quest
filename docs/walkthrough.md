@@ -1,6 +1,6 @@
-# Repository walkthrough: preparation
+# Repository walkthrough
 
-In the walkthrough, the teaching staff open this repository and ask high-level questions. **Any member can be asked about any part**, and the grade rewards explaining *how* it is built, *why*, its *limits*, and *how it could change*. This page is a guided tour of the repository and answers to common questions about how it is built. The details behind every answer are in [architecture.md](architecture.md) and [security-audit.md](security-audit.md).
+A guided tour of the repository, followed by answers to common questions about how Life Quest is built, why it was built that way, its limits, and how it could change. The details behind every answer are in [architecture.md](architecture.md) and [security-audit.md](security-audit.md).
 
 ## 1. The 5-minute tour (open the files in this order)
 
@@ -95,21 +95,27 @@ Three direct ones (`streamlit`, `pillow`, `pytest`), pinned to exact versions, a
 ### Team process
 **How did you work as a team?**
 - Each member owns features (see the commit history).
-- Changes go through branches and pull requests, with GitHub Desktop.
+- Features were built on branches and merged with a pull request (for example the login screen, PR #2); small final fixes before submission were committed directly to `main`, always with the tests passing.
 - Tests run automatically on every push.
 - One design guide is shared by everyone's AI tools.
 
-## 3. Practise like this
+## 3. Suggested demo path
 
-1. Everyone reads `architecture.md` once.
-2. Split the questions above: each person rehearses one section out loud, then **swap**, because anyone can be asked anything.
-3. Do the 5-minute tour once each, with someone else asking "why?" after every answer.
-4. Run `uv run pytest` together once, so everyone has seen the tests pass.
+A short route through the live app that shows most of the product:
 
-Scheduled email uses a restricted worker credential, a daily outbox and explicit opt-in. Explain why SMTP acceptance cannot guarantee inbox delivery and why ambiguous failures are not automatically retried. See `docs/reminders.md`.
+1. **Sign up** with a new account and finish onboarding (pillars, starting levels, city).
+2. **Complete a quest on Home.** XP is awarded and the next, slightly harder quest is saved in one database transaction.
+3. **Open a pillar page:** the 14-day activity grid, habit journeys and the progress reflection.
+4. **Recap:** this week compared with last week, the per-pillar breakdown and the CSV export.
+5. **Squad and Competition:** a shared quest that needs two confirmations, and a daily 1v1 score.
+6. **Leaderboard:** the weekly podium. Prizes are paid once, when the week closes (UTC).
+7. **Settings → Your data, your choice**, and the public Privacy Policy, which works without an account.
+8. **Invalid input:** a wrong password or a too-short password is rejected with a clear message.
 
-## Final rehearsal additions — 23 November
+Demo runs use disposable accounts, so real players' accounts and scores are never changed.
 
-Before presenting, each member should practise sign-up/onboarding with a disposable account, complete one quest and explain atomic XP/progression, compare the habit journey and Recap, show shared squad participation and a 1v1 score, and explain the weekly podium/reset. Show Settings → Your data, your choice and the anonymous Privacy Policy. Do not delete a real account or change real competition scores during rehearsal. Have the controller explain the email-based rights process and why SMTP acceptance is not inbox delivery. Finish by pointing to the passing CI and the owner-only, rolled-back database privacy test.
+### Notes
 
-Prepare screenshots as a network-failure fallback, and practise answering out loud: any of us can be asked about any part. What we verified and the known limits are in [verification.md](verification.md).
+- **Reminder emails** use a restricted worker credential, a daily outbox and explicit opt-in. An email provider accepting a message does not guarantee it reaches the inbox, so unclear failures are not retried automatically (to avoid duplicates). See [reminders.md](reminders.md).
+- **Rights and deletion requests** are sent by email and handled by the controller, following [privacy-operations.md](privacy-operations.md).
+- **What we verified, and the known limits:** [verification.md](verification.md).
