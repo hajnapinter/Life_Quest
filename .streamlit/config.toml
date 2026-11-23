@@ -3,7 +3,7 @@
 
 [theme]
 base = "light"
-primaryColor = "#D4551F"              # burnt orange: buttons, checkboxes, toggles, focus
+primaryColor = "#BF4A1A"              # burnt orange: buttons, checkboxes, toggles, focus
 backgroundColor = "#FFF9F4"           # warm off-white page
 secondaryBackgroundColor = "#FFF1E6"  # inputs, code, subtle fills
 textColor = "#2B2330"                 # plum ink
@@ -16,7 +16,7 @@ headingFontSizes = ["2.6rem", "1.6rem", "1.25rem"]
 baseRadius = "1rem"
 buttonRadius = "full"
 greenColor = "#3E9B63"
-orangeColor = "#D4551F"
+orangeColor = "#BF4A1A"
 chartCategoricalColors = ["#FF8A4C", "#7CC394", "#B9A8F2", "#F7B7D2", "#FFC48A", "#8FC7E8", "#F2D16B"]
 chartSequentialColors = ["#FFF1E6", "#FFE0CB", "#FFCBA6", "#FFB07A", "#FF9A5C", "#FF8A4C", "#F07434", "#E2642A", "#D4551F", "#B8461A"]
 

@@ -28,7 +28,7 @@ Precedence: what the team asks for in the current task wins, then this file, the
 | Surface | `#FFFFFF` | cards, quest rows, tiles, inputs, nav bar |
 | Ink | `#2B2330` | all body text and headings |
 | Muted | `#7A6E7E` | captions, eyebrows, secondary labels |
-| Action | `#D4551F` | `primaryColor`: primary buttons, checkboxes, toggles, selected nav item. Audit finding: white text on this colour is about 4.10:1, below AA for normal-sized text; palette correction remains pending (see provider-review-2026-11-23.md). |
+| Action | `#BF4A1A` | `primaryColor`: primary buttons, checkboxes, toggles, keyboard focus outlines. White text on it is 4.99:1 (passes WCAG AA for normal text). It replaced `#D4551F` (only 4.10:1). Don't lighten it below 4.5:1 with white. |
 | Glow | `#FF8A4C` | bright orange for fills, highlights, shadows. **Never** as a text colour or as a button background with white text (fails contrast). |
 | Growth | `#7CC394` | the sprout, success moments |
 | Line | `#F1E4DA` | hairline borders on inputs and tables |
@@ -44,7 +44,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 ## Type
 
 - Font: Inter Tight everywhere (set in `config.toml`; also loaded in the Google button iframe).
-- `st.title` (h1): weight **300**, 2.6rem, tight letter-spacing. One per screen.
+- `st.title` (h1): weight **300**, 2.6rem, tight letter-spacing. Exactly one main heading per screen; on Home it is the name in `greeting()` (marked `role="heading" aria-level="1"`), so Home has no `st.title`.
 - `st.subheader` / h2–h3: weight 600.
 - Eyebrow labels above titles: `<div class="lq-eyebrow">…</div>` (small caps-spaced uppercase, muted). Use these, not `st.caption("ALL CAPS · TEXT")`.
 - Running text: sentence case, short, encouraging, second person ("Pick what fits today").
@@ -65,7 +65,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 | Activity over time for a pillar | `heatmap(category, activity, title, less, more, weekdays)`; replaces bar charts |
 | Stats | `st.metric` in `st.container(key="stat_row_<name>").columns(2–3)`; white tiles that stay side by side on phones (the change vs last week is hidden there) |
 | A quest the user can tick | `st.checkbox` inside `st.container(key="quest_row_<id>")`; the key prefix gives the card style and the "completed" animation |
-| Main navigation | Squad and ⚔️ Competition are separate pages; Squad contains shared quests and its ranking, Competition contains daily 1v1 challenges. Use the `st.radio` inside `st.container(key="bottom_navigation")`; a white pill floating at the bottom on phones, sticky at the top on desktop; the selected item is Action orange |
+| Main navigation | Squad and ⚔️ Competition are separate pages; Squad contains shared quests and its ranking, Competition contains daily 1v1 challenges. Use the `st.radio` inside `st.container(key="bottom_navigation")`; a white pill floating at the bottom on phones, sticky at the top on desktop; the selected item is a light peach pill. On phones the pill sits 56px above the bottom edge so the hosting platform's bottom-right controls (Streamlit Community Cloud) never cover it; the page has matching bottom padding |
 | Onboarding choice cards | widgets inside the `onboarding` keyed container get card styling automatically; multi-select options go in a 2-column grid of `st.container(key="pickcard_<name>")` cards (checkbox + caption, no dashes in labels) |
 | A white card around a group of widgets | `st.container(key="card_<name>")`; any key starting with `card_` gets the card style |
 | Weekly ranking | `squad_ranking(rows, me, title)` on the Squad page, for the selected squad only (compact rows, medals for the top 3, the user highlighted). The separate weekly Leaderboard page uses `leaderboard()` with profile avatars and a three-height podium. |
@@ -138,6 +138,6 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 - Progress reflections use the verified free Requesty model with bounded activity evidence and no identity/location. Failures use a clearly labeled local encouragement, never pretend AI succeeded.
 - Settings omits city editing and the personalization form; stored onboarding preferences remain in effect.
 
-Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus retains a subtle visible outline.
+Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus shows a 2px Action (`#BF4A1A`) outline, about 5:1 against the white bar, so keyboard users can always see where they are. Never use a pale outline (the old `#E8CFC0` was 1.49:1).
 
 During verified session restoration, hide only the auth form with `.st-key-auth_restoring` and show a translated restoration status. Do not flash a signed-out screen or hide the session component. Connection failures offer retry without discarding credentials.

@@ -2,15 +2,13 @@
 
 Life Quest turns personal development into a friendly game. You choose the life
 areas ("pillars") you want to grow in, get small practical quests that adapt to
-your pace, earn XP, and progress together with friends in squads.
+your pace, earn XP, and progress together with friends in squads and 1v1
+competitions.
 
 [![Tests](https://github.com/hajnapinter/Life_Quest/actions/workflows/tests.yml/badge.svg)](https://github.com/hajnapinter/Life_Quest/actions/workflows/tests.yml)
 
-## Deployed application
-
-[Open Life Quest](https://life-quest-team.streamlit.app/)
-
-Deployment: Streamlit Community Cloud, `main` branch. Setup: [docs/deploy.md](docs/deploy.md).
+**Live app: [life-quest-team.streamlit.app](https://life-quest-team.streamlit.app/)**
+(Streamlit Community Cloud, deployed from the `main` branch; see [docs/deploy.md](docs/deploy.md)).
 
 ## Team
 
@@ -21,48 +19,37 @@ Deployment: Streamlit Community Cloud, `main` branch. Setup: [docs/deploy.md](do
 | Hajna Pintér | 81324 |
 | Janka Stolk | 83499 |
 
-## Run it locally
-
-```bash
-uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502   # app at http://127.0.0.1:8502
-uv run pytest                                                                # Python tests
-node --test tests/*.test.cjs checks/*.test.cjs                                             # Google sign-in tests
-```
-
-The app needs `.streamlit/secrets.toml` with the Supabase URL and anon key (see *Local setup* below).
-Without an AI key it still works: quests then come from the built-in habit library.
-
 ## Main features
 
-- Sign-up and login with email (validated) or Google (PKCE), through Supabase Auth.
-- Onboarding: nickname, any of the seven pillars, starting level per pillar, how many quests to show, city search.
-- Five adaptive quests kept ready per pillar; harder after a success, easier after "too hard"; shown 1–5 at a time.
-- Optional free AI wording of quests, strictly validated, with a habit-library fallback.
-- Pillar pages with XP, weekly change, streak, a 14-day activity grid and next steps; each quest shows when its target adapted ("↑ up from 4,000 last time").
-- Weekly recap with a per-pillar breakdown and a CSV export of all completed quests.
-- Squads with invite codes, shared weekly quests needing two confirmations, and a weekly squad ranking.
-- Daily 1v1 competitions with friends and weekly winners.
-- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo and notification preferences. Daily opt-in reminder emails run hourly through GitHub Actions and Brevo; browser push supports a device test only.
-- English, Portuguese, French and German everywhere after login (onboarding included); works on phone and desktop.
+**Account and onboarding**
+- Sign-up and login with a validated email address or Google (PKCE), through Supabase Auth. Confirmation emails can be resent (60-second cooldown) and errors are explained clearly.
+- You stay signed in after reloading or reopening the app for up to 30 days. Only a rotating refresh credential is kept in the browser, and Supabase verifies it on every restore. Logging out clears it on every tab.
+- Onboarding: nickname, any of the seven pillars, a starting level per pillar, how many quests to show, city/country and target-language preferences.
 
-## How it is built
+**Quests and progress**
+- Five adaptive quests are kept ready per pillar, shown 1–5 at a time. A target rises after a success and drops after "too hard", within fixed limits; each quest shows when its target changed ("↑ up from 4,000 last time").
+- Variety: 84 locally translated practical activity variants across 35 habit tracks. Wording is personalised to your country, city and languages, but targets, difficulty and XP are never changed by personalisation.
+- Optional free AI wording of quests, strictly validated and rejecting recently repeated titles, with a fallback to the built-in habit library when no AI key is set or the service is down.
+- Pillar pages with XP, weekly change, streak, a 14-day activity grid and habit journeys (starting and latest target, next task, purpose, long-term direction).
+- Progress insights based only on recorded completions (most consistent habit, this week versus the same weekday last week, life areas explored), plus a short AI reflection with a labelled local fallback.
+- Weekly recap with a per-pillar breakdown and a CSV export of all completed quests, including multiplayer rewards.
 
-See **[docs/architecture.md](docs/architecture.md)**: where the data is stored, security, what the tests
-cover, what happens when an external service is down, known limits, and a demo checklist.
-Preparing the repository walkthrough: [docs/walkthrough.md](docs/walkthrough.md). Security review: [docs/security-audit.md](docs/security-audit.md).
-The visual design rules are in [docs/design.md](docs/design.md).
+**Playing with friends**
+- Squads with invite codes or copyable invite links, shared weekly quests that need two confirmations, member-by-quest participation and a weekly squad ranking.
+- Daily 1v1 competitions with a live two-player ranking and weekly winners. Invitations must be explicitly accepted or dismissed after login, and survive the Google sign-in handoff without putting tokens in links.
+- A leaderboard of every account, refreshed every 30 seconds. At the end of each UTC week the top three players with positive XP get 100/50/25 bonus XP once.
 
-## Tech stack
+**Settings, reminders and privacy**
+- Settings: pillars, quests per pillar, profile photo, avatar ring, language and notification preferences.
+- Opt-in daily reminder emails, sent hourly by a GitHub Actions worker through Brevo. Browser push supports a device test only.
+- A public privacy notice in four languages (linked on the login screen and in Settings) and an email-based path for rights and deletion requests.
+- English, Portuguese, French and German everywhere after login; works on phone and desktop.
 
-- Streamlit (Python) for the interface; Supabase Auth and PostgreSQL for accounts and data.
-- Row Level Security and database functions for access control.
-- External APIs: Requesty (optional, free models only) and Photon / OpenStreetMap (city search).
-- Dependencies pinned in `pyproject.toml` / `uv.lock` / `requirements.txt`; tests and a dependency audit run on every push.
+## Run it locally
 
-## Local setup
+Requirements: [`uv`](https://docs.astral.sh/uv/) (Python 3.11+) and, for the JavaScript tests, Node.js.
 
-1. Install `uv`.
-2. Create `.streamlit/secrets.toml` with the local Supabase values:
+1. Create `.streamlit/secrets.toml` with the Supabase project URL and anon key (shared privately by the team):
 
    ```toml
    [supabase]
@@ -70,134 +57,100 @@ The visual design rules are in [docs/design.md](docs/design.md).
    anon_key = "YOUR_SUPABASE_ANON_KEY"
    ```
 
-3. For the existing shared Supabase project, the migrations are already applied. Do not rerun `schema.sql`. For a new project, follow the ordered steps in [the team setup guide](docs/team-setup.md).
-4. Start the app:
+   Without an AI key the app still works: quests come from the built-in habit library. AI setup: [docs/ai-quests-setup.md](docs/ai-quests-setup.md).
+
+2. Start the app. It opens at http://127.0.0.1:8502 on your own computer only (the public version is the live app above):
 
    ```bash
    uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502
    ```
 
-5. Run the tests:
+3. Run the tests:
 
    ```bash
-   uv run pytest
+   uv run pytest                                      # all Python tests (tests/ and checks/)
+   node --test tests/*.test.cjs checks/*.test.cjs     # Google sign-in and session tests (JavaScript)
    ```
+
+Without `uv`, create a virtual environment, run `pip install -r requirements.txt`, then use `python -m streamlit run …` and `python -m pytest` instead.
 
 Never commit `.streamlit/secrets.toml` or any other file containing credentials.
 
-## Sharing the project with teammates
+### Database
 
-The repository contains the application code, database SQL, documentation, and
-project configuration. It does not contain `.streamlit/secrets.toml` because
-that file contains credentials.
+The shared Supabase project already has every migration applied, so do **not** rerun `schema.sql`. To set up a new Supabase project, follow the ordered steps in [docs/team-setup.md](docs/team-setup.md). Email (SMTP) and Google sign-in setup: [docs/supabase-setup.md](docs/supabase-setup.md). Set the public app URL in `auth_config.json` for each deployment.
 
-Each teammate should:
+### Access for teammates
 
-1. Clone or download the repository from GitHub.
-2. Create `.streamlit/secrets.toml` using the template above.
-3. Use the same Supabase project URL and anon key shared privately by the team.
-4. Run `uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502`.
-5. Create an account and join the squad with the invite code.
+- **Using the app** needs only the live link and a Life Quest account.
+- **Programming** needs access to this repository and your own `.streamlit/secrets.toml` with the same URL and anon key.
+- **Changing tables or policies** needs a Supabase membership: add each teammate in **Project Settings → Team** with their own email. Never share a Supabase password.
 
-The SQL files only need to be run when setting up a new Supabase project. If
-the team is using the existing Life Quest Supabase project, the database is
-already configured.
+If the live app shows "Supabase is not configured", add the same two values to the Streamlit app's **Secrets** setting and restart it. The deployed app does not read the `secrets.toml` file on your computer.
 
-### Important: app access versus Supabase dashboard access
+## How it is built
 
-The public Streamlit link and the Supabase dashboard are separate services:
+- **Interface:** Streamlit (Python). All styling lives in `design.py` and `.streamlit/config.toml`; rules in [docs/design.md](docs/design.md).
+- **Accounts and data:** Supabase Auth and PostgreSQL. Every database call sends the user's own login token, so Row Level Security and database functions decide what each user may read or change. XP can only be awarded by database functions, never written by the browser.
+- **External services:** Requesty (optional, free AI models only), Photon / OpenStreetMap (city search), Brevo (reminder emails).
+- **Quality:** dependencies are pinned in `pyproject.toml` / `uv.lock` / `requirements.txt`; GitHub Actions runs the Python tests, the JavaScript tests and a dependency audit on every push.
 
-- To open and use the app, teammates only need the working public link and a
-  Life Quest account. They do not need your Supabase login.
-- To program the app, teammates need access to this repository and their own
-  local `.streamlit/secrets.toml` containing the same project URL and anon key.
-- To inspect or change tables, policies, or SQL in the Supabase dashboard, add
-  each teammate as a member in Supabase **Project Settings → Team** using her
-  own email address. Never share your Supabase password or an account login.
-
-If the published link shows “Supabase is not configured”, open the deployment
-settings for the Streamlit app and add these two secrets to its Secrets field:
-
-```toml
-[supabase]
-url = "THE_EXISTING_SUPABASE_PROJECT_URL"
-anon_key = "THE_EXISTING_SUPABASE_ANON_KEY"
-```
-
-The deployed app does not read the `.streamlit/secrets.toml` file on your
-computer. After saving the deployment secrets, redeploy or restart the app.
+More detail:
+- [docs/architecture.md](docs/architecture.md): data storage, security, test coverage, what happens when a service is down, known limits.
+- [docs/security-audit.md](docs/security-audit.md): security review.
+- [docs/product-rules.md](docs/product-rules.md) and [docs/social-play.md](docs/social-play.md): quest, XP and multiplayer rules.
+- [docs/reminders.md](docs/reminders.md): the scheduled reminder worker.
+- [docs/walkthrough.md](docs/walkthrough.md): the repository walkthrough script.
 
 ## Project structure
 
 ```text
-app.py                  Entry point: login, dashboard, navigation, Settings
-onboarding.py           First-run questions
+app.py                  Entry point: login, dashboard, navigation, Settings, api_request()
+auth_helpers.py         Login rules (email, password, redirects), independent of Streamlit
+browser_session.py      Restores a verified session after reload (up to 30 days)
+onboarding.py           First-run questions (onboarding_text.py: pt/fr/de wording)
+i18n.py                 Interface translations (en/pt/fr/de)
+
+quest_plan.py           Habit tracks, progression and statistics (pure logic, the core)
+quest_variety.py        Practical activity variants; never changes targets or XP
+quest_languages.py      Translations of quest titles and targets
+quest_display.py        Shows stored quests in the user's language
+personalization.py      Country/city/language wording; never changes targets or XP
+ai_quests.py            Optional free AI wording with strict validation
 ai_quest_ui.py          Home and pillar pages (quests, statistics)
-quest_plan.py           Quest tracks, progression and statistics (pure logic)
-ai_quests.py            Optional AI wording with strict validation
-social_play.py          Squads, squad ranking, 1v1 competitions
-profile_data.py / account.py  Profile settings, photo, avatar, device notification test
+habit_journey.py        Habit journeys shown on pillar pages
+progress_insights.py    Feedback based only on recorded completions
+
+social_play.py          Squads, squad ranking and 1v1 competitions
+duel_progress.py        Live standings for 1v1 competitions
+invitations.py          Invite codes and links; joining needs an explicit action
+weekly_leaderboard.py   All-player weekly ranking and prizes
+
+profile_data.py         Shared profile settings helpers
+account.py              Profile photo, avatar ring, device notification test
 places.py               City search (Photon / OpenStreetMap)
+reminder_settings.py    Opt-in reminder email settings
+privacy.py              Public privacy notice and rights requests
 design.py               All styling and reusable UI pieces
-supabase/*.sql          Tables, security rules and database functions
-tests/                  Automated tests
-docs/                   Architecture, design rules, setup guides
+
+auth_component/         Google sign-in in the browser (PKCE)
+session_component/      Browser side of the remembered sign-in
+scripts/send_reminders.py  Reminder email worker run by GitHub Actions
+supabase/*.sql          Tables, security rules, database functions and live checks
+tests/                  Original automated test suite
+checks/                 Regression tests added for later features
+docs/                   Architecture, design rules, setup and privacy guides
+.github/workflows/      Tests on every push; hourly reminder worker
 ```
 
-## Confirmation email and Google sign-in
+### Why there are two test folders
 
-The login screen supports confirmation-email resend with a 60-second cooldown,
-clear authentication errors and Google OAuth with PKCE. Google activates only
-after its provider is configured in Supabase. Custom SMTP is configured in
-Supabase, not in the Streamlit code. See [the setup guide](docs/supabase-setup.md)
-for SMTP/domain setup, Google Cloud credentials, redirects and verification.
-Set the public app URL in `auth_config.json` for each deployment.
+`tests/` is the original suite: unit tests, security checks and end-to-end workflows that drive the real app against an in-memory Supabase (`tests/fake_supabase.py`). Our team rule (see `AGENTS.md`) is that existing tests are not edited as a side effect of a feature change, so the tests that prove an old behaviour still work as written.
 
-## Current team handoff
-
-See [docs/team-setup.md](docs/team-setup.md) for the exact local start command,
-private configuration, database migration order and validation checks. No server
-credentials are included in the repository. The local app URL is
-`http://127.0.0.1:8502/`; it is not a publicly hosted deployment.
-
-### Alternative: Python virtual environment
-
-Use Python 3.11 or newer. Create and activate a virtual environment, then install dependencies:
-
-    python3 -m venv .venv
-    source .venv/bin/activate
-    python -m pip install -r requirements.txt
-
-Start the app privately:
-
-    python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8502
-
-Run tests:
-
-    python -m pytest -q
-
-Use the Supabase secrets setup described above. This does not publish the app.
-
-## Latest product fixes
-
-Country/city and target-language preferences personalise quests. Recap and CSV include multiplayer rewards and exact awarded XP. Same-tab reload restores the verified session; logout clears it. Squad membership and duel invitations can be managed without deleting history. See [scheduled reminders](docs/reminders.md) for installation and operational limits.
-
-## Quest variety and friend invitations
-
-New quests rotate through 84 locally translated practical activity variants (35 habit tracks); the free AI also rejects recently repeated titles, including number-only changes. Targets, difficulty and XP rules are unchanged. Existing assigned quests remain until completed; completed history retains its saved activity/context.
-
-Recap and pillar pages explain recorded progress: the most consistent track by active days, completed quests versus the same weekday last week, and the number of life areas explored. These are summaries of self-reported completions, not claims of real-world outcomes.
-
-Squad and pending Competition invitations now include a copyable link. After login/onboarding the recipient explicitly accepts or dismisses it. The Google PKCE handoff carries the pending invitation across tabs, without putting login tokens in links. Regression checks for these workflows live in `checks/` alongside the unchanged original `tests/` suite.
-
-## Weekly competition and habit journeys
-
-The six navigation destinations have plain centered labels. Competition places active results and a live two-player ranking above rules/invitations. Either social invite field recognizes Squad/1v1 codes and invitation links. Squad shows member-by-quest participation, with its ranking in the desktop right column.
-
-Leaderboard includes every account and refreshes every 30 seconds. At the end of each UTC week, positive-XP participants in the top three receive 100/50/25 XP once. Ties and prize exclusion rules are explained on the page. SQL: `supabase/weekly-leaderboard.sql` (apply last). First eligible prize week starts on installation, with no retroactive prizes.
-
-Habit expanders have broad names, recorded starting/latest targets, the next task, purpose and long-term direction. The progress card uses the verified free AI model for a motivational reflection grounded in recorded activities, with a labeled local fallback. Settings omits city and personalization editing while keeping saved onboarding answers.
+`checks/` holds the regression tests added with later features: remembered sign-in, invitation links through Google sign-in, quest variety and insights, the second round of social features, and privacy. Both folders run together: `uv run pytest` collects every Python test in both, and CI runs the JavaScript tests in both.
 
 ## Privacy and account requests
 
-Read the public [Privacy Policy](https://life-quest-team.streamlit.app/?privacy=1) (also linked on login and in Settings), or its [English source](docs/privacy-en.md). Portuguese, French and German are available in the app. Controller: Hajna Pinter, 81324@novasbe.pt. Rights and deletion requests are user-sent emails, not automatic account deletion. Administrators must follow [the privacy runbook](docs/privacy-operations.md). Provider agreements and international transfers still require controller review before claiming GDPR compliance.
+Read the public [Privacy Policy](https://life-quest-team.streamlit.app/?privacy=1) (also linked on the login screen and in Settings), or its [English source](docs/privacy-en.md); Portuguese, French and German versions are in the app. Controller: Hajna Pintér, 81324@novasbe.pt.
+
+Rights and deletion requests are emails the user sends; accounts are not deleted automatically. Administrators follow [the privacy runbook](docs/privacy-operations.md). Provider agreements and international transfers still need controller review before the app could claim GDPR compliance.

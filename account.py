@@ -154,7 +154,7 @@ def _permission_button(t: dict) -> None:
   button{{border:1px solid #F1E4DA;background:#fff;border-radius:999px;height:40px;padding:0 18px;font:600 14px "Inter Tight",system-ui,sans-serif;
     color:#2B2330;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}}
   button:hover{{transform:translateY(-2px);box-shadow:0 10px 20px -12px rgba(212,85,31,.7)}}
-  button:focus-visible{{outline:2px solid #D4551F;outline-offset:2px}}
+  button:focus-visible{{outline:2px solid #BF4A1A;outline-offset:2px}}
   p{{margin:6px 4px 0;font-size:13px;color:#7A6E7E}}
 </style>
 <button id="b">🔔 </button><p id="s" role="status" aria-live="polite"></p>

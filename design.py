@@ -14,7 +14,7 @@ INK = "#2B2330"
 MUTED = "#7A6E7E"
 PAGE = "#FFF9F4"
 SURFACE = "#FFFFFF"
-ACTION = "#D4551F"       # buttons, checks: white text passes contrast
+ACTION = "#BF4A1A"       # buttons, checks: white text 4.99:1 (WCAG AA)
 GLOW = "#FF8A4C"         # bright orange for fills and highlights, never for text
 GROWTH = "#7CC394"       # sprout / success green
 LINE = "#F1E4DA"
@@ -42,7 +42,7 @@ _CSS = """
 /* Avoid a login flash while the browser restores a verified session. */
 .st-key-auth_restoring {visibility:hidden; height:0; overflow:hidden;}
 /* ---------- Page ---------- */
-.stMainBlockContainer {max-width:720px; padding-top:2.25rem; padding-bottom:128px;}
+.stMainBlockContainer {max-width:720px; padding-top:2.25rem; padding-bottom:172px;}
 h1 {letter-spacing:-0.025em; line-height:1.05 !important;}
 [data-testid="stCaptionContainer"] {color:%(muted)s;}
 
@@ -100,12 +100,12 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
 @media(max-width:480px) {
  .st-key-bottom_navigation {border-radius:22px !important;}
  .st-key-bottom_navigation [role="radiogroup"] {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
- .stMainBlockContainer {padding-bottom:140px !important;}
+ .stMainBlockContainer {padding-bottom:184px !important;}
 }
 /* ---------- Floating bottom navigation ---------- */
 .st-key-bottom_navigation {
   position:fixed; z-index:1000; left:50%%; transform:translateX(-50%%);
-  bottom:calc(14px + env(safe-area-inset-bottom, 0px));
+  bottom:calc(56px + env(safe-area-inset-bottom, 0px));  /* clears the hosting platform's bottom-right controls */
   width:min(680px, calc(100%% - 24px)); background:%(surface)s; border-radius:999px;
   padding:6px; box-shadow:0 14px 34px -14px rgba(43,35,48,.45);}
 .st-key-bottom_navigation [data-testid="stElementContainer"], .st-key-bottom_navigation [data-testid="stRadio"] {width:100%% !important;}
@@ -315,7 +315,7 @@ div.stButton > button:active, div.stFormSubmitButton > button:active {transform:
 .st-key-bottom_navigation [role="radiogroup"] label:hover {background:#FFF7F0; transform:none; box-shadow:none;}
 .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked):hover,
 .st-key-bottom_navigation [role="radiogroup"] label:active {background:#FFF1E6; transform:none; box-shadow:none;}
-.st-key-bottom_navigation [role="radiogroup"] label[data-focus-visible="true"] {outline:2px solid #E8CFC0; outline-offset:2px;}
+.st-key-bottom_navigation [role="radiogroup"] label[data-focus-visible="true"] {outline:2px solid %(action)s; outline-offset:2px;}
 .lq-pillar .lq-ico {transition:transform .3s cubic-bezier(.2,1.4,.4,1);}
 .lq-pillar:hover .lq-ico {transform:rotate(-8deg) scale(1.1);}
 .lq-heat .grid i {transition:transform .15s ease;}
@@ -367,7 +367,7 @@ def greeting(hello: str, name: str, xp: int, photo: str | None = None, ring: str
     """Top of a main screen: avatar, small 'Hello,' line, big light name, XP pill."""
     st.markdown(
         f'<div class="lq-top"><div class="who">{avatar_html(name, photo, ring, size=58)}<div><div class="lq-hi">{html.escape(hello)}</div>'
-        f'<div class="lq-name">{html.escape(name)}</div></div></div>'
+        f'<div class="lq-name" role="heading" aria-level="1">{html.escape(name)}</div></div></div>'
         f'<span><span class="lq-xp">🌱 {int(xp)} XP</span></span></div>',
         unsafe_allow_html=True,
     )
