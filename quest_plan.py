@@ -147,6 +147,8 @@ def progress_hint(quest, rows):
 
 def quest_xp(quest):
     """XP a completed quest earned: shared challenges carry points, pillar quests 10 + 5 x difficulty."""
+    if quest.get('xp_awarded') is not None:
+        return int(quest['xp_awarded'])
     if quest.get('points') is not None:
         return int(quest['points'])
     return 10 + 5 * int(quest.get('difficulty') or 1)
@@ -167,18 +169,19 @@ def weekly_recap(rows, today=None):
     previous_start = start - timedelta(days=7)
     done = [(q, _completed_day(q)) for q in rows if q.get('status') == 'completed']
     week = [(q, d) for q, d in done if d and start <= d <= today]
-    last_week = [q for q, d in done if d and previous_start <= d < start]
+    last_week = [q for q, d in done if d and previous_start <= d < start and q.get('counts_as_quest', True)]
     per_pillar, per_day = {}, {}
     for q, d in week:
-        per_pillar[q.get('category', '')] = per_pillar.get(q.get('category', ''), 0) + 1
-        per_day[d] = per_day.get(d, 0) + 1
+        if q.get('counts_as_quest', True):
+            per_pillar[q.get('category', '')] = per_pillar.get(q.get('category', ''), 0) + 1
+        per_day[d] = per_day.get(d, 0) + int(q.get('counts_as_quest', True))
     best_day = max(per_day.items(), key=lambda item: (item[1], item[0])) if per_day else None
     return {
         'week_start': start,
-        'completed': len(week),
+        'completed': sum(q.get('counts_as_quest', True) for q, _ in week),
         'xp': sum(quest_xp(q) for q, _ in week),
         'previous_completed': len(last_week),
-        'delta': len(week) - len(last_week),
+        'delta': sum(q.get('counts_as_quest', True) for q, _ in week) - len(last_week),
         'active_days': len(per_day),
         'per_pillar': dict(sorted(per_pillar.items(), key=lambda item: (-item[1], item[0]))),
         'best_day': best_day,

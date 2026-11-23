@@ -25,9 +25,8 @@
 | L4 | Some older functions were executable by anonymous users (they still required a login inside). | Low | Fixed – run SQL |
 | L5 | Uploads up to Streamlit's default 200 MB were accepted before our 8 MB check. | Low | Fixed (`maxUploadSize = 8`; tested) |
 | L6 | Logging out did not end the session on Supabase. | Low | Fixed (calls `/auth/v1/logout`; tested) |
-| L7 | The squad ranking matches people by display name (names aren't unique). | Low | Accepted: the leaderboard function returns no user ids; documented in `architecture.md`. |
+| L7 | The squad ranking matched people by display name. | Low | Fixed in `product-fixes.sql`: member-only ranking with stable user IDs. |
 | L8 | The 8-character password minimum and email cooldown are enforced in the app; Supabase's own minimum may be lower. | Low | Action: set *Minimum password length = 8* in Supabase → Authentication → Policies (dashboard setting). |
-| I1 | The Pro flag and profile photo live in user-editable metadata. | Info | Accepted: Pro is a demo. A real version would store Pro in a server-only table written by the payment provider. |
 | I2 | The weekly leaderboard shows the top 50 display names and XP to every signed-in user (no emails or ids). | Info | Accepted, by design. |
 
 ## What was already good (verified)
@@ -42,7 +41,7 @@
 - **Neutral sign-up messages** don't reveal whether an email already has an account.
 - **HTML output:** every custom HTML block escapes user text; photo URLs must be `data:image/…` and are attribute-escaped.
 - **Photos** are re-encoded to an 80×80 JPEG (removes metadata and disguised files; decompression bombs are rejected).
-- **AI answers are validated** before use; the prompt treats input as data; only free models are used; no name, email or location is sent.
+- **AI answers are validated** before use; the prompt treats input as data; only free models are used; no name or email is sent; city/country and preferences are disclosed and sent for generation.
 - **CSV exports** neutralise cells starting with `= + - @` (CSV injection).
 - **Dependencies:** three direct packages, pinned exactly, audited with `pip-audit` on every push (no known vulnerabilities).
 
@@ -82,3 +81,9 @@ back, including accounts, memberships, scores and XP.
 A scan of 124 unique historical file blobs found no local configured keys or
 JWT/API-token patterns. This is an automated pattern check, not a guarantee that
 every possible kind of secret can be detected.
+
+## 23 November changes
+
+No subscription state controls feature access. Refresh credentials now persist in tab-scoped sessionStorage; project scoping, source/origin checks, server identity validation and logout clearing are regression-tested. Browser script injection would still endanger these credentials. The reminder worker stores a hash-only restricted credential in the database, never a service-role key, and keeps raw SMTP/worker credentials exclusively in private Actions Secrets. Private outbox tables use RLS; RPCs return only the minimum claimed recipients to the authenticated worker credential. See `reminders.md` for delivery and retry limits.
+
+Live product regression on 23 November: exact XP/context, replay protection, same-day progression, multiplayer history, same-name ranking, decline/cancel/end permissions, retained XP on leaving and reminder consent/deduplication/invalid-key rejection were checked in a rolled-back transaction. Reproduce with `supabase/check-product-fixes.sql`. No mail is sent by that script.

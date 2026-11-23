@@ -86,11 +86,14 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
   bottom:calc(14px + env(safe-area-inset-bottom, 0px));
   width:min(680px, calc(100%% - 24px)); background:%(surface)s; border-radius:999px;
   padding:6px; box-shadow:0 14px 34px -14px rgba(43,35,48,.45);}
-.st-key-bottom_navigation [role="radiogroup"] {display:flex; flex-wrap:nowrap !important; gap:4px;
-  overflow-x:auto; scrollbar-width:none;}
+.st-key-bottom_navigation [role="radiogroup"] {display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px;
+  overflow:visible;}
 .st-key-bottom_navigation [role="radiogroup"]::-webkit-scrollbar {display:none;}
-.st-key-bottom_navigation [role="radiogroup"] label {white-space:nowrap; border-radius:999px; padding:9px 14px; margin:0;
+.st-key-bottom_navigation [role="radiogroup"] label {white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
   color:%(muted)s; font-weight:500; transition:background .2s ease;}
+.st-key-bottom_navigation [role="radiogroup"] label p {font-size:11px; line-height:1.3; overflow-wrap:anywhere;}
+div[class*="st-key-pillar_link_"] button p {font-size:1.15rem; font-weight:600;}
+div[class*="st-key-pillar_link_"] button {padding-left:0;}
 .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:%(action)s; color:#fff;}
 .st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) p {color:#fff;}
 .st-key-bottom_navigation [data-testid="stRadioOption"] > div > div:first-child,
@@ -179,23 +182,6 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
 .lq-ranking .pts {text-align:right; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.2;}
 .lq-ranking .pts small {display:block; font-weight:400; font-size:11px; color:%(muted)s;}
 
-/* ---------- Pro ---------- */
-.lq-pro {position:relative; border-radius:24px; padding:20px 22px 18px; margin-bottom:12px; color:%(ink)s;
-  background:linear-gradient(140deg,#2B2330 0%%,#4A3550 100%%); color:#FFF6EF; overflow:hidden; animation:lq-up .45s ease-out both;}
-.lq-pro::after {content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%%;
-  background:radial-gradient(circle,#FF8A4C66,transparent 70%%); animation:lq-bob 4s ease-in-out infinite;}
-.lq-pro.on {background:linear-gradient(140deg,#FFB27F 0%%,#F9C4DA 100%%); color:%(ink)s;}
-.lq-pro h3 {margin:8px 0 6px; font-size:1.35rem; font-weight:600; color:inherit; padding:0;}
-.lq-pro p {margin:0; font-size:14px;}
-.lq-pro ul {margin:8px 0 0; padding-left:18px; display:grid; gap:4px; font-size:14px;}
-.lq-pro-badge {display:inline-block; font-size:11px; font-weight:700; letter-spacing:.14em; padding:4px 10px; border-radius:999px;
-  background:linear-gradient(90deg,#FF8A4C,#F7B7D2); color:%(ink)s;}
-.lq-pro .soon, .lq-pro-soon .soon {margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.18);}
-.lq-pro-soon .soon {border-top:0; padding-top:0; margin:0 0 10px;}
-.soon span {font-size:12px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; opacity:.75;}
-.soon ul {margin:6px 0 0; padding-left:0; list-style:none; display:grid; gap:4px; font-size:13.5px; opacity:.9;}
-.lq-pro-soon .soon ul {color:%(muted)s;}
-
 /* Quests-per-pillar rows: 1-5 buttons fill their half evenly */
 .st-key-card_quests_shown [data-testid="stButtonGroup"] {width:100%%;}
 .st-key-card_quests_shown [data-testid="stButtonGroup"] > div {display:flex; width:100%%;}
@@ -238,7 +224,8 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
   .stMainBlockContainer {max-width:1080px; padding-bottom:4rem;}
   .st-key-bottom_navigation {position:sticky; top:12px; left:auto; bottom:auto; transform:none;
     width:fit-content; max-width:100%%; margin:0 auto 10px;}
-  .lq-hero {min-height:170px; padding:28px 32px 30px;}
+  .lq-hero {min-height:130px; padding:22px 26px;}
+  .st-key-bottom_navigation [role="radiogroup"] label p {font-size:14px;}
   .lq-hero h3 {font-size:2rem; max-width:18ch;}
   .lq-hero p {max-width:46ch;}
   .lq-sprout {width:150px; height:150px; right:24px;}
@@ -348,13 +335,12 @@ def pillar_colors(category: str) -> tuple[str, str]:
     return PILLAR_COLORS.get(category, DEFAULT_PILLAR)
 
 
-def greeting(hello: str, name: str, xp: int, pro: bool = False, photo: str | None = None, ring: str = "peach") -> None:
-    """Top of a main screen: avatar, small 'Hello,' line, big light name, XP pill (+ Pro badge)."""
-    badge = '<span class="lq-pro-badge">PRO</span> ' if pro else ""
+def greeting(hello: str, name: str, xp: int, photo: str | None = None, ring: str = "peach") -> None:
+    """Top of a main screen: avatar, small 'Hello,' line, big light name, XP pill."""
     st.markdown(
         f'<div class="lq-top"><div class="who">{avatar_html(name, photo, ring, size=58)}<div><div class="lq-hi">{html.escape(hello)}</div>'
         f'<div class="lq-name">{html.escape(name)}</div></div></div>'
-        f'<span>{badge}<span class="lq-xp">🌱 {int(xp)} XP</span></span></div>',
+        f'<span><span class="lq-xp">🌱 {int(xp)} XP</span></span></div>',
         unsafe_allow_html=True,
     )
 
@@ -430,7 +416,7 @@ def initials(name: str) -> str:
     return html.escape("".join(p[0] for p in parts[:2]).upper() or "?")
 
 
-# Avatar ring styles (Pro can pick one; everyone else gets "peach").
+# Avatar ring styles available to everyone.
 AVATAR_RINGS = {
     "peach": "linear-gradient(140deg,#FFB27F,#F9C4DA)",
     "lilac": "linear-gradient(140deg,#B9A8F2,#F7B7D2)",
@@ -523,7 +509,7 @@ def squad_ranking(rows: list[dict], me: str, title: str, xp_label: str = "XP", q
     medals = {1: "🥇", 2: "🥈", 3: "🥉"}
     out = f'<div class="lq-ranking"><div class="lq-eyebrow">{html.escape(title)}</div>'
     for n, r in enumerate(rows, 1):
-        mine = " me" if me and r["name"] == me else ""
+        mine = " me" if r.get("is_me",bool(me and r["name"]==me)) else ""
         badge = medals.get(n, str(n)) if int(r["points"]) > 0 else "·"
         out += (f'<div class="row{mine}"><span class="n">{badge}</span>'
                 f'<span class="who"><i>{initials(r["name"])}</i>{html.escape(r["name"])}</span>'

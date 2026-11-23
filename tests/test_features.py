@@ -1,4 +1,4 @@
-"""City search, Pro rules, profile photo and safe HTML (places.py, pro.py, account.py, design.py)."""
+"""City search, Pro rules, profile_datafile photo and safe HTML (places.py, profile_datafile_data.py, account.py, design.py)."""
 import base64
 from contextlib import nullcontext
 import io
@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import account
 import design
 import places
-import pro
+import profile_data
 
 
 class State(dict):
@@ -24,7 +24,7 @@ class State(dict):
 
 
 def fake_state(monkeypatch, *modules, metadata=None, location=""):
-    state = State(user={"id": "u1", "user_metadata": metadata or {}}, profile={"location": location},
+    state = State(user={"id": "u1", "user_metadata": metadata or {}}, profile_datafile={"location": location},
                   access_token="token")
     for module in modules:
         monkeypatch.setattr(module, "st", SimpleNamespace(session_state=state))
@@ -104,49 +104,31 @@ def test_failed_search_is_not_cached(monkeypatch):
     assert places.search_places("Porto")  # service is back: works without waiting for the cache to expire
 
 
-# ---------- Pro rules ----------
-
-def test_free_accounts_get_three_pillars(monkeypatch):
-    fake_state(monkeypatch, pro)
-    assert pro.is_pro() is False
-    assert pro.pillar_limit() == 3
-
-
-def test_free_accounts_keep_pillars_they_already_had(monkeypatch):
-    fake_state(monkeypatch, pro)
-    assert pro.pillar_limit(5) == 5
-
-
-def test_pro_accounts_get_all_seven_pillars(monkeypatch):
-    fake_state(monkeypatch, pro, metadata={"lifequest_pro": {"active": True}})
-    assert pro.is_pro() is True
-    assert pro.pillar_limit() == 7
-
-
-def test_cancelled_pro_is_free_again(monkeypatch):
-    fake_state(monkeypatch, pro, metadata={"lifequest_pro": {"active": False, "plan": "yearly"}})
-    assert pro.is_pro() is False
+# All pillars are available without a subscription.
+def test_all_accounts_have_seven_pillars():
+    assert profile_data.pillar_limit()==7
+    assert profile_data.pillar_limit(5)==7
 
 
 @pytest.mark.parametrize("location,country", [("Lisbon, Portugal", "Portugal"),
                                               ("Lisburn, Northern Ireland, United Kingdom", "United Kingdom"),
                                               ("", ""), (None, "")])
 def test_country_comes_from_the_saved_city(location, country):
-    assert pro.country_of(location) == country
+    assert profile_data.country_of(location) == country
 
 
 def test_saving_metadata_uses_the_server_answer(monkeypatch):
-    state = fake_state(monkeypatch, pro)
+    state = fake_state(monkeypatch, profile_data)
     api = lambda method, path, payload, token: ({"id": "u1", "user_metadata": payload["data"]}, None)
-    assert pro.save_user_data(api, {"lifequest_pro": {"active": True}}) is None
-    assert state.user["user_metadata"]["lifequest_pro"]["active"] is True
+    assert profile_data.save_user_data(api, {"lifequest_preferences": {"active": True}}) is None
+    assert state.user["user_metadata"]["lifequest_preferences"]["active"] is True
 
 
 def test_saving_metadata_reports_errors_and_changes_nothing(monkeypatch):
-    state = fake_state(monkeypatch, pro)
+    state = fake_state(monkeypatch, profile_data)
     api = lambda *args: (None, "Network error")
-    assert pro.save_user_data(api, {"lifequest_pro": {"active": True}}) == "Network error"
-    assert "lifequest_pro" not in state.user["user_metadata"]
+    assert profile_data.save_user_data(api, {"lifequest_preferences": {"active": True}}) == "Network error"
+    assert "lifequest_preferences" not in state.user["user_metadata"]
 
 
 # ---------- profile photo ----------
@@ -181,17 +163,13 @@ def test_only_image_data_urls_count_as_a_photo(monkeypatch):
     assert account.photo() is None
 
 
-def test_avatar_ring_is_a_pro_perk(monkeypatch):
+def test_avatar_ring_available_to_everyone(monkeypatch):
     fake_state(monkeypatch, account, metadata={"lifequest_profile": {"ring": "lilac"}})
-    monkeypatch.setattr(account, "is_pro", lambda: False)
-    assert account.ring() == "peach"
-    monkeypatch.setattr(account, "is_pro", lambda: True)
     assert account.ring() == "lilac"
 
 
 def test_unknown_ring_falls_back_to_default(monkeypatch):
     fake_state(monkeypatch, account, metadata={"lifequest_profile": {"ring": "<script>"}})
-    monkeypatch.setattr(account, "is_pro", lambda: True)
     assert account.ring() == "peach"
 
 

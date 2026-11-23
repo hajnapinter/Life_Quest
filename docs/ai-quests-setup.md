@@ -36,7 +36,7 @@ Validation included mocked UI tests for replacement and pillar isolation, all 35
 
 ## Data and limitations
 
-Only pillar, numeric level, recent generated quest text and ratings go to Requesty and the model host. Name, email, user ID and location are not included. Provider retention and training policies can differ; review the model's data policy before public release. The UI tells users which service receives these answers.
+Pillar, numeric level, recent quest text, ratings, city/country, target language and preferred session length go to Requesty and the model host. Name, email and user ID are not included. Provider retention and training policies can differ; review the model's data policy before public release. The UI tells users which service receives these answers.
 
 RLS isolates users' quest histories. Completion remains self-reported. Direct inserts are revoked, but the authenticated slot RPC accepts client-supplied content and difficulty; this remains a self-improvement app, not an anti-cheating system for adversarial competition. A trusted generation backend would be needed for that use case.
 
@@ -55,3 +55,5 @@ Generated quests must have a clear completion criterion, gentle progression, no 
 Personal quests render as one-line checkbox rows on Home and pillar pages. The row contains only the task sentence. Checking queues an atomic completion/replacement; failures restore the unchecked row for retry. Requests remain queued until handled, supporting multiple quick checks and safe retries. The old row fades and the new ID enters with a short slide/fade; reduced-motion preferences are respected. XP is shown in a toast after successful storage, and the Home total is refreshed. Per-pillar statistics and history are unchanged.
 
 Shared squad missions use the same compact checkbox style while retaining their two-participant confirmation rule. Competition score-entry forms remain because that mode compares numeric results.
+
+For the configured NVIDIA free model, thinking is disabled with `chat_template_kwargs.enable_thinking=false`; otherwise the small response budget may be consumed before any JSON output. Every call still verifies zero input/output cost and validates the returned targets. No paid fallback is used.

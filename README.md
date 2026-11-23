@@ -26,7 +26,7 @@ Deployment: Streamlit Community Cloud, `main` branch. Setup: [docs/deploy.md](do
 ```bash
 uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502   # app at http://127.0.0.1:8502
 uv run pytest                                                                # Python tests
-node --test tests/oauth.test.cjs                                             # Google sign-in tests
+node --test tests/*.test.cjs                                             # Google sign-in tests
 ```
 
 The app needs `.streamlit/secrets.toml` with the Supabase URL and anon key (see *Local setup* below).
@@ -35,15 +35,14 @@ Without an AI key it still works: quests then come from the built-in habit libra
 ## Main features
 
 - Sign-up and login with email (validated) or Google (PKCE), through Supabase Auth.
-- Onboarding: nickname, pillars (up to 3, all 7 with Pro), starting level per pillar, how many quests to show, city search.
+- Onboarding: nickname, any of the seven pillars, starting level per pillar, how many quests to show, city search.
 - Five adaptive quests kept ready per pillar; harder after a success, easier after "too hard"; shown 1–5 at a time.
 - Optional free AI wording of quests, strictly validated, with a habit-library fallback.
 - Pillar pages with XP, weekly change, streak, a 14-day activity grid and next steps; each quest shows when its target adapted ("↑ up from 4,000 last time").
 - Weekly recap with a per-pillar breakdown and a CSV export of all completed quests.
 - Squads with invite codes, shared weekly quests needing two confirmations, and a weekly squad ranking.
 - Daily 1v1 competitions with friends and weekly winners.
-- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo and notification preferences. Browser notifications currently support a device test; scheduled push and reminder emails are not implemented.
-- Life Quest Pro (demo subscription): all pillars, avatar styles, country-personalised quests (placeholder), and a list of features that would need paid APIs.
+- Settings: pillars, quests per pillar, city (OpenStreetMap search), profile photo and notification preferences. Daily opt-in reminder emails run hourly through GitHub Actions and Brevo; browser push supports a device test only.
 - English, Portuguese, French and German everywhere after login (onboarding included); works on phone and desktop.
 
 ## How it is built
@@ -137,7 +136,7 @@ ai_quest_ui.py          Home and pillar pages (quests, statistics)
 quest_plan.py           Quest tracks, progression and statistics (pure logic)
 ai_quests.py            Optional AI wording with strict validation
 social_play.py          Squads, squad ranking, 1v1 competitions
-pro.py / account.py     Pro demo, profile photo, avatar, notifications
+profile_data.py / account.py  Profile settings, photo, avatar, device notification test
 places.py               City search (Photon / OpenStreetMap)
 design.py               All styling and reusable UI pieces
 supabase/*.sql          Tables, security rules and database functions
@@ -178,3 +177,7 @@ Run tests:
     python -m pytest -q
 
 Use the Supabase secrets setup described above. This does not publish the app.
+
+## Latest product fixes
+
+Country/city and target-language preferences personalise quests. Recap and CSV include multiplayer rewards and exact awarded XP. Same-tab reload restores the verified session; logout clears it. Squad membership and duel invitations can be managed without deleting history. See [scheduled reminders](docs/reminders.md) for installation and operational limits.

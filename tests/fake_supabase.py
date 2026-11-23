@@ -32,6 +32,7 @@ class FakeSupabase:
         self.quests = []         # ai_quests rows
         self.squads = []         # {id, name, invite_code, members: [user ids]}
         self.squad_quests = []   # {id, squad_id, title, description, confirmed: [user ids]}
+        self.rewards = []
         self.calls = []          # (method, path) log, for assertions
         self._ids = itertools.count(1)
 
@@ -203,6 +204,7 @@ class FakeSupabase:
             if len(quest["confirmed"]) == 2:          # two confirmations unlock 30 XP for both
                 for member in quest["confirmed"]:
                     self.profiles[member]["points"] += 30
+                    self.rewards.append({"user_id":member,"category":"Squad","title":quest["title"],"points":30,"status":"completed","completed_at":now_iso(),"source":"squad_quest"})
         return None
 
     def rpc_get_social_state(self, uid, body):
@@ -218,3 +220,20 @@ class FakeSupabase:
         return {"today": today.isoformat(), "week_start": (today - timedelta(days=today.weekday())).isoformat(),
                 "squads": squads, "duels": [], "friends": [{"id": f, "name": self.profiles[f]["display_name"]} for f in friends],
                 "points": self.profiles[uid]["points"]}
+
+    def rpc_get_activity_history(self,uid,body):
+        return [q for q in self.rewards if q['user_id']==uid]
+
+    def rpc_get_squad_leaderboard(self,uid,body):
+        squad=next((s for s in self.squads if s['id']==body.get('squad_id_input') and uid in s['members']),None)
+        if not squad: self.error(400,'Not your squad','P0001')
+        result=[]
+        for member in squad['members']:
+            rows=[q for q in self.quests if q['user_id']==member and q['status']=='completed']+[q for q in self.rewards if q['user_id']==member]
+            result.append({'user_id':member,'display_name':self.profiles[member]['display_name'],'weekly_points':sum(q.get('points',10+5*q.get('difficulty',1)) for q in rows),'quests_completed':len(rows)})
+        return result
+
+    def rpc_leave_squad(self,uid,body):
+        squad=next((s for s in self.squads if s['id']==body.get('squad_id_input') and uid in s['members']),None)
+        if not squad: self.error(400,'Not your squad','P0001')
+        squad['members'].remove(uid)

@@ -3,6 +3,7 @@ from quest_display import quest_text, quest_texts
 import os
 import time
 import threading
+import logging
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 import streamlit as st
@@ -10,8 +11,8 @@ from ai_quests import generate_slot_quests, QuestGenerationError
 from onboarding import PILLARS
 from quest_plan import slot_plan, pillar_statistics, TRACKS, clean_title, EXPERIENCE_FOCUSES, progress_hint, weekly_recap, completed_csv
 from design import greeting, hero, pillar_header, heatmap, pillar_bars
-from pro import is_pro
 from account import photo as account_photo, ring as account_ring
+from personalization import clean_preferences, personalize_title
 
 
 def ai_config():
@@ -66,6 +67,9 @@ def build_batch(category, slots, rows, pending_id=None, allow_ai=True):
         return st.session_state[pending_key],pending_key
     history=[q for q in rows if q['category']==category]
     plans=[slot_plan(category,slot,starting_level(category),history) for slot in slots]
+    preferences=clean_preferences(st.session_state.user.get('user_metadata',{}).get('lifequest_preferences'))
+    context={**preferences,'location':st.session_state.profile.get('location',''), 'level':starting_level(category)}
+    plans=[{**plan,'context':context} for plan in plans]
     key=ai_config()
     attempts,lock=generation_guard()
     identity=(user_id,category,pending_id or tuple(slots))
@@ -76,8 +80,9 @@ def build_batch(category, slots, rows, pending_id=None, allow_ai=True):
     if key and can_call and allow_ai:
         try:
             language = st.session_state.get("language", "en")
-            plans = generate_slot_quests(key, plans, history, language)
-        except QuestGenerationError:
+            plans = generate_slot_quests(key, plans, history, language, preferences=context)
+        except QuestGenerationError as error:
+            logging.getLogger(__name__).warning('Quest generation fallback: %s',str(error))
             st.session_state.quest_library_used=True
     elif allow_ai:
         st.session_state.quest_library_used=True
@@ -191,11 +196,26 @@ def trend_html(direction, previous):
     return f'<span class="lq-trend {direction}">{html.escape(text)}</span>'
 
 
+def display_titles(quests):
+    titles=quest_texts([clean_title(q.get('title',''),q.get('target')) for q in quests])
+    language=st.session_state.get('language','en')
+    current=clean_preferences(st.session_state.user.get('user_metadata',{}).get('lifequest_preferences'))
+    result=[]
+    for title,quest in zip(titles,quests):
+        context=quest.get('context') if isinstance(quest.get('context'),dict) else {}
+        if not context and quest.get('status')=='completed':
+            result.append(title)
+            continue
+        context=context or {**current,'location':st.session_state.profile.get('location',''),'level':starting_level(quest.get('category',''))}
+        result.append(personalize_title(title,quest,context,context.get('location',''),language,context.get('level',1)))
+    return result
+
+
 def render_quest_cards(api, rows, category, limit=5):
     language = st.session_state.get("language", "en")
     # Five quests stay ready per pillar; only the first `limit` (by slot) are shown.
     active=sorted([q for q in rows if q['category']==category and q['status']=='active'],key=lambda q:q['slot'])[:limit]
-    titles=quest_texts([clean_title(q['title'],q.get('target')) for q in active])
+    titles=display_titles(active)
     for quest, title in zip(active, titles):
         with st.container(key='quest_row_'+quest['id']):
             st.checkbox(title,key='quest_check_'+quest['id'],on_change=queue_completion,args=(quest['id'],))
@@ -232,6 +252,8 @@ def load_board(api, categories):
 
 
 CATEGORY_NAMES = {
+    "Squad": {"pt": "Equipa", "fr": "Équipe", "de": "Team"},
+    "Competition": {"pt": "Competição", "fr": "Compétition", "de": "Wettbewerb"},
     "Fitness": {"pt": "Exercício", "fr": "Sport", "de": "Fitness"},
     "Health": {"pt": "Saúde", "fr": "Santé", "de": "Gesundheit"},
     "Languages": {"pt": "Idiomas", "fr": "Langues", "de": "Sprachen"},
@@ -251,15 +273,20 @@ def completed_today(rows):
     return sum(1 for q in rows if q['status']=='completed' and (q.get('completed_at') or '').startswith(today))
 
 
+def open_pillar(category):
+    st.session_state.current_page=f'{PILLARS[category][0]} {category}'
+    st.session_state.main_navigation='🏠 Home'
+
+
 def render_home(api):
     language = st.session_state.get("language", "en")
     name=st.session_state.profile.get('display_name','there')
     hello = {"en": "Hello,", "pt": "Olá,", "fr": "Salut,", "de": "Hallo,"}.get(language, "Hello,")
-    greeting(hello, name, st.session_state.profile.get("points",0), pro=is_pro(), photo=account_photo(), ring=account_ring())
     categories=[c for c in st.session_state.profile.get('selected_categories',[]) if c in PILLARS]
     rows=load_board(api,categories)
     if rows is None:
         return
+    greeting(hello, name, st.session_state.profile.get("points",0), photo=account_photo(), ring=account_ring())
     done=completed_today(rows)
     if done:
         title={"en": f"{done} done today. Keep going!", "pt": f"{done} feitas hoje. Continua!",
@@ -285,7 +312,10 @@ def render_home(api):
         for column, category in zip(st.columns(2, gap="large"), categories[start:start+2]):
             with column:
                 shown=quests_shown(category)
-                pillar_header(category, PILLARS[category][0], category_name(category), caption(shown))
+                with st.container(key='pillar_link_'+category.replace(' ','_')):
+                    st.button(f'{PILLARS[category][0]} {category_name(category)} →',
+                              key='open_pillar_'+category,type='tertiary',on_click=open_pillar,args=(category,))
+                    st.caption(caption(shown))
                 render_quest_cards(api,rows,category,limit=shown)
 
 
@@ -354,7 +384,7 @@ def render_pillar(api, category):
                             }.get(st.session_state.get("language", "en"), "Your current step")
 
 
-                    st.write(f'**{step_label}:** {quest_text(plan["title"])}')
+                    st.write(f'**{step_label}:** {display_titles([plan])[0]}')
                     habit_message = {
             "en": f"{len(completed)} completed in this habit track. Each completion unlocks the next step.",
             "pt": f"{len(completed)} missões concluídas neste hábito. Cada conclusão desbloqueia o próximo passo.",
@@ -398,7 +428,7 @@ def render_pillar(api, category):
     table_labels["en"]
 )
 
-        localized_history=quest_texts([q["title"] for q in finished])
+        localized_history=display_titles(finished)
         st.dataframe([
     {
         quest_label: translated_title,
@@ -451,7 +481,14 @@ def render_recap(api):
         st.error(_tx('Your quests could not be loaded. Please refresh to reconnect.','Não foi possível carregar as tuas missões. Atualiza a página para voltar a ligar.',
                      'Impossible de charger tes quêtes. Actualise la page pour te reconnecter.','Deine Quests konnten nicht geladen werden. Lade die Seite neu, um dich erneut zu verbinden.'))
         return
-    everything=recap_rows(rows)
+    social,error=api('POST','/rest/v1/rpc/get_activity_history',{},st.session_state.access_token)
+    if error or not isinstance(social,list):
+        st.error(_tx('Your complete activity could not be loaded. Please try again.',
+                     'Não foi possível carregar toda a tua atividade. Tenta novamente.',
+                     'Impossible de charger toute ton activité. Réessaie.',
+                     'Deine vollständige Aktivität konnte nicht geladen werden. Bitte versuche es erneut.'))
+        return
+    everything=recap_rows(rows)+social
     recap=weekly_recap(everything)
     st.caption(_tx('Since Monday','Desde segunda-feira','Depuis lundi','Seit Montag')+f' · {recap["week_start"].isoformat()}')
     a,b,c=st.container(key='stat_row_recap').columns(3)
@@ -461,7 +498,8 @@ def render_recap(api):
     c.metric(_tx('Active days','Dias ativos','Jours actifs','Aktive Tage'),f'{recap["active_days"]}/7')
     if recap['completed']:
         st.subheader(_tx('By pillar','Por área','Par domaine','Nach Bereich'))
-        pillar_bars([(cat,f'{PILLARS.get(cat,("•",))[0]} {category_name(cat)}',n) for cat,n in recap['per_pillar'].items()])
+        icons={'Squad':'👥','Competition':'⚔️'}
+        pillar_bars([(cat,f'{icons.get(cat,PILLARS.get(cat,("•",))[0])} {category_name(cat)}',n) for cat,n in recap['per_pillar'].items()])
         day,count=recap['best_day']
         st.caption('🌟 '+_tx('Best day','Melhor dia','Meilleur jour','Bester Tag')+f': {WEEKDAYS.get(language,WEEKDAYS["en"])[day.weekday()]} · {count} '
                    +_tx('quests','missões','quêtes','Quests'))
@@ -478,7 +516,7 @@ def render_recap(api):
                        f'Tes {total} quêtes terminées dans un fichier CSV. S’ouvre avec Excel, Numbers ou Google Sheets.',
                        f'Alle {total} abgeschlossenen Quests als CSV-Datei. Öffnet sich in Excel, Numbers oder Google Sheets.'))
         export_rows=[dict(q) for q in everything if q.get('status')=='completed']
-        for q, title in zip(export_rows, quest_texts([q.get('title','') for q in export_rows])):
+        for q, title in zip(export_rows, display_titles(export_rows)):
             q['title']=title
             q['category']=category_name(q.get('category',''))
         st.download_button('⬇️ '+_tx('Download CSV','Descarregar CSV','Télécharger le CSV','CSV herunterladen'),

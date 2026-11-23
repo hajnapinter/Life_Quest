@@ -21,8 +21,11 @@ from social_play import render_social
 from design import apply_styles, brand, hero, profile_card, splash
 from i18n import language_picker, translate_pillar_label
 from places import city_picker, clear_city_picker
-from pro import pillar_limit, render_pro_card, is_pro
+from profile_data import pillar_limit
 from account import photo as account_photo, ring as account_ring, render_photo_setting, render_push_setting
+from browser_session import sync_session
+from personalization import render_preferences
+from reminder_settings import render_reminder_settings
 
 
 st.set_page_config(page_title="Life Quest", page_icon="🌱", layout="centered")
@@ -375,6 +378,7 @@ def render_auth() -> None:
 def load_user_data() -> bool:
     """Load user data into session state and report required request failures."""
     token = st.session_state.access_token
+    st.session_state.setdefault("language",st.session_state.user.get("user_metadata",{}).get("lifequest_language","en"))
     user_id = st.session_state.user["id"]
     profile_query = urlencode({"select": "*", "id": f"eq.{user_id}"})
     profiles, error = api_request("GET", f"/rest/v1/profiles?{profile_query}", access_token=token)
@@ -429,7 +433,9 @@ def save_onboarding(nickname: str, location: str, categories: list[str], levels:
     token = st.session_state.access_token
     answers = {"version": 1, "nickname": nickname, "categories": categories,
                "levels": levels, "quests_shown": quests_shown or {}, "completed": True}
-    user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers}}, token)
+    user, error = api_request("PUT", "/auth/v1/user", {"data": {"lifequest_onboarding": answers,
+         "lifequest_preferences":st.session_state.get('ob_preferences',{}),
+         "lifequest_language":st.session_state.get('language','en')}}, token)
     if error:
         st.error(friendly_error(None, "We couldn’t save your answers. Please try again."))
         return False
@@ -609,12 +615,12 @@ def update_profile(fields: dict) -> bool:
 
 
 def render_pillars_setting(lang: str) -> None:
-    """Add or remove pillars. Free: up to 3 (accounts that already had more keep them); Pro: all 7."""
+    """Add or remove any of the seven pillars."""
     labels = {
-        "en": ("Your pillars", "Save pillars", "Free plan: up to {n} pillars. Pro unlocks all 7.", "Pillars saved. New quests are being prepared.", "Keep at least one pillar.", "We couldn't save your pillars. Please try again."),
-        "pt": ("As tuas áreas", "Guardar áreas", "Plano gratuito: até {n} áreas. O Pro desbloqueia as 7.", "Áreas guardadas. Estamos a preparar novas missões.", "Mantém pelo menos uma área.", "Não foi possível guardar as áreas. Tenta novamente."),
-        "fr": ("Tes domaines", "Enregistrer", "Offre gratuite : {n} domaines maximum. Pro débloque les 7.", "Domaines enregistrés. De nouvelles quêtes se préparent.", "Garde au moins un domaine.", "Impossible d'enregistrer tes domaines. Réessaie."),
-        "de": ("Deine Bereiche", "Bereiche speichern", "Kostenlos: bis zu {n} Bereiche. Pro schaltet alle 7 frei.", "Bereiche gespeichert. Neue Quests werden vorbereitet.", "Behalte mindestens einen Bereich.", "Deine Bereiche konnten nicht gespeichert werden. Bitte versuche es erneut."),
+        "en": ("Your pillars", "Save pillars", "Choose the pillars that interest you.", "Pillars saved. New quests are being prepared.", "Keep at least one pillar.", "We couldn't save your pillars. Please try again."),
+        "pt": ("As tuas áreas", "Guardar áreas", "Escolhe as áreas que te interessam.", "Áreas guardadas. Estamos a preparar novas missões.", "Mantém pelo menos uma área.", "Não foi possível guardar as áreas. Tenta novamente."),
+        "fr": ("Tes domaines", "Enregistrer", "Choisis les domaines qui te plaisent.", "Domaines enregistrés. De nouvelles quêtes se préparent.", "Garde au moins un domaine.", "Impossible d'enregistrer tes domaines. Réessaie."),
+        "de": ("Deine Bereiche", "Bereiche speichern", "Wähle die Bereiche, die dich interessieren.", "Bereiche gespeichert. Neue Quests werden vorbereitet.", "Behalte mindestens einen Bereich.", "Deine Bereiche konnten nicht gespeichert werden. Bitte versuche es erneut."),
     }
     title, save_label, limit_note, saved, need_one, failed = labels.get(lang, labels["en"])
     if st.session_state.get("pillars_toast"):
@@ -720,7 +726,7 @@ def render_settings() -> None:
             "reminders": "Daily email reminders",
             "save_error": "We couldn't save your notification setting. Please try again.",
             "privacy": "Your selected pillars, starting levels and quest feedback personalise your quests.",
-            "ai_privacy": "AI requests go through Requesty and its free model provider; your name and email are not sent.",
+            "ai_privacy": "AI requests send your city, country, preferences, levels and quest feedback to Requesty and its free model provider; your name and email are not sent.",
             "next": "Your next chapter starts here",
         },
         "pt": {
@@ -729,7 +735,7 @@ def render_settings() -> None:
             "reminders": "Lembretes diários por email",
             "save_error": "Não foi possível guardar as definições. Tenta novamente.",
             "privacy": "As áreas escolhidas, os níveis iniciais e o teu feedback personalizam as missões.",
-            "ai_privacy": "Os pedidos de IA passam pelo Requesty e pelo seu fornecedor de modelo gratuito; o teu nome e email não são enviados.",
+            "ai_privacy": "Os pedidos enviam cidade, país, preferências, níveis e feedback ao Requesty e ao fornecedor do modelo gratuito; nome e email não são enviados.",
             "next": "O teu próximo capítulo começa aqui",
         },
         "fr": {
@@ -738,7 +744,7 @@ def render_settings() -> None:
             "reminders": "Rappels quotidiens par e-mail",
             "save_error": "Impossible d'enregistrer ce paramètre. Réessaie.",
             "privacy": "Tes domaines choisis, tes niveaux de départ et tes commentaires personnalisent tes quêtes.",
-            "ai_privacy": "Les demandes d'IA passent par Requesty et son fournisseur de modèle gratuit ; ton nom et ton e-mail ne sont pas envoyés.",
+            "ai_privacy": "Les demandes envoient ville, pays, préférences, niveaux et commentaires à Requesty et au fournisseur du modèle gratuit ; ni nom ni e-mail.",
             "next": "Ton prochain chapitre commence ici",
         },
         "de": {
@@ -747,7 +753,7 @@ def render_settings() -> None:
             "reminders": "Tägliche E-Mail-Erinnerungen",
             "save_error": "Deine Einstellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
             "privacy": "Deine ausgewählten Bereiche, Startlevel und dein Feedback personalisieren deine Quests.",
-            "ai_privacy": "KI-Anfragen laufen über Requesty und dessen kostenlosen Modellanbieter; dein Name und deine E-Mail werden nicht gesendet.",
+            "ai_privacy": "KI-Anfragen senden Stadt, Land, Vorlieben, Level und Feedback an Requesty und dessen kostenlosen Modellanbieter; Name und E-Mail werden nicht gesendet.",
             "next": "Dein nächstes Kapitel beginnt hier",
         },
     }
@@ -760,7 +766,7 @@ def render_settings() -> None:
     with left, st.container(key="card_profile"):
         profile_card(
             profile.get('display_name', 'Quest explorer'),
-            ("✨ Pro · " if is_pro() else "") + f"🌱 {profile.get('points', 0)} XP · {profile.get('location') or text['next']}",
+            f"🌱 {profile.get('points', 0)} XP · {profile.get('location') or text['next']}",
             photo=account_photo(), ring=account_ring(),
         )
         render_photo_setting(api_request, lang)
@@ -770,34 +776,18 @@ def render_settings() -> None:
         render_pillars_setting(lang)
     with left, st.container(key="card_quests_shown"):
         render_quests_shown_setting(lang)
-    with right, st.container(key="card_pro"):
-        render_pro_card(api_request, lang)
+    with right, st.container(key="card_personalization"):
+        render_preferences(api_request,lang)
     with right, st.container(key="card_notifications"):
         st.subheader(text["notifications"])
-        reminders = st.toggle(
-            text["reminders"],
-            value=bool(profile.get("email_reminders", False))
-        )
+        render_reminder_settings(api_request)
+        render_push_setting(api_request,lang)
 
-        render_push_setting(api_request, lang)
-
-        if reminders != bool(profile.get("email_reminders", False)):
-            query = urlencode({"id": f"eq.{st.session_state.user['id']}"})
-            _, error = api_request(
-                "PATCH",
-                f"/rest/v1/profiles?{query}",
-                {"email_reminders": reminders},
-                st.session_state.access_token
-            )
-
-            if error:
-                st.error(text["save_error"])
-            else:
-                profile["email_reminders"] = reminders
         if st.button(t("logout"), width="stretch"):
             # Revoke the refresh token on Supabase too, not just in this browser session.
             api_request("POST", "/auth/v1/logout", {}, st.session_state.access_token)
             st.session_state.clear()
+            st.session_state.clear_browser_session=True
             st.rerun()
 
 
@@ -813,8 +803,12 @@ def render_dashboard() -> None:
         language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", *pillar_pages, "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings"]
+    pages = ["🏠 Home", "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings"]
     language = st.session_state.get("language", "en")
+    if st.session_state.user.get('user_metadata',{}).get('lifequest_language')!=language:
+        updated,error=api_request('PUT','/auth/v1/user',{'data':{'lifequest_language':language}},st.session_state.access_token)
+        if not error and isinstance(updated,dict) and updated.get('id'):
+            st.session_state.user=updated
     labels = {
         "🏠 Home": t("home"),
         "📊 Recap": "📊 " + t("recap"),
@@ -828,10 +822,25 @@ def render_dashboard() -> None:
         """Keep the translated labels stable throughout this render."""
         return labels.get(item, item)
 
-    if st.session_state.get("current_page") not in pages:
+    if st.session_state.get("current_page") not in pages and st.session_state.get("current_page") not in pillar_pages:
         st.session_state.current_page = "🏠 Home"
+    def choose_main_page():
+        st.session_state.current_page=st.session_state.main_navigation
+    current=st.session_state.current_page
     with st.container(key="bottom_navigation"):
-       page = st.radio("Explore Life Quest", pages, key="current_page", horizontal=True, label_visibility="collapsed", format_func=nav_label)
+       st.radio("Explore Life Quest",pages,index=pages.index(current) if current in pages else 0,
+                key="main_navigation",horizontal=True,label_visibility="collapsed",format_func=nav_label,
+                on_change=choose_main_page)
+    page=st.session_state.current_page
+    if page in pillar_pages:
+        if st.button('← '+t('home'),key='pillar_back'):
+            st.session_state.current_page='🏠 Home'
+            st.rerun()
+        choice=st.selectbox({"en":"Your pillar","pt":"A tua área","fr":"Ton domaine","de":"Dein Bereich"}.get(language,"Your pillar"),list(pillar_pages),index=list(pillar_pages).index(page),
+                            format_func=nav_label,key='pillar_picker_'+pillar_pages[page])
+        if choice!=page:
+            st.session_state.current_page=choice
+            st.rerun()
     if page == "🏠 Home":
         render_home(api_request)
     elif page in pillar_pages:
@@ -857,6 +866,8 @@ if supabase_config() is None:
     )
     st.stop()
 
+
+sync_session(api_request,supabase_config()[0])
 
 if st.session_state.access_token:
     expires_at = st.session_state.get("token_expires_at")

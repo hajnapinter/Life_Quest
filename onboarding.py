@@ -2,9 +2,10 @@
 import streamlit as st
 from design import hero
 from places import city_picker
-from pro import pillar_limit
+from profile_data import pillar_limit
 from i18n import language_picker
 from onboarding_text import ob, pillar_text
+from personalization import render_preference_fields
 
 PILLARS = {
     'Adventure': ('🌍', 'Explore more', 'New places, fresh experiences, little adventures.', ['I usually stick to familiar places', 'I try something new a few times a year', 'I explore somewhere new every month', 'I seek new experiences most weeks', 'Exploring is already part of my everyday life']),
@@ -84,8 +85,6 @@ def _render_onboarding(save):
                     st.checkbox(f'{english[0]}  **{name}**', key='ob_pick_' + pillar, disabled=full and not picked)
                     st.caption(tagline)
         chosen = [p for p in PILLARS if st.session_state.get('ob_pick_' + p)][:limit]
-        if full and limit < len(PILLARS):
-            st.caption(ob('pillars_pro'))
         if st.button(ob('pillars_button'), type='primary', disabled=not chosen, use_container_width=True):
             st.session_state.ob_categories = chosen
             advance(3)
@@ -127,7 +126,10 @@ def _render_onboarding(save):
             st.write(f'📍 **{location}**')
         st.caption(ob('city_note'))
         st.caption(ob('ai_note'))
-        if st.button(ob('prepare'), type='primary', use_container_width=True):
+        preferences=render_preference_fields(st.session_state.get('ob_preferences',{}),'ob_preferences',st.session_state.get('language','en'),'Languages' in categories)
+        st.session_state.ob_preferences=preferences
+        if st.button(ob('prepare'), type='primary', use_container_width=True,
+                     disabled='Languages' in categories and not preferences['target_language']):
             with st.status(ob('preparing'), expanded=True) as status:
                 st.write(ob('saving'))
                 levels = {p: PILLARS[p][3].index(st.session_state['ob_level_' + p]) + 1 for p in categories}

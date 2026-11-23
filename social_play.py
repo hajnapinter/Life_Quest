@@ -33,33 +33,22 @@ def queue_squad_confirmation(quest_id):
     if st.session_state.get('team_check_'+quest_id):
         st.session_state.team_confirmation_request=quest_id
 
+@st.fragment(run_every="30s")
 def render_social(api, competition=False):
     render_quest_styles()
 
     if competition:
-        st.markdown('<div class="lq-eyebrow">' + tx("Competition", "Competição", "Compétition", "Wettbewerb") + '</div>', unsafe_allow_html=True)
         st.title(tx("A friendly challenge", "Um desafio entre amigos", "Un défi entre amis", "Ein freundschaftlicher Wettstreit"))
-        hero(
-            tx("Daily 1v1 quests", "Missões diárias 1v1", "Quêtes quotidiennes en duel", "Tägliche 1-gegen-1-Quests"),
-            tx("Challenge a friend", "Desafia um amigo", "Défie un ami", "Fordere einen Freund heraus"),
-            tx("Same quest. Your own pace. A new winner every week.",
-               "A mesma missão. Ao teu ritmo. Um novo vencedor a cada semana.",
-               "La même quête. À ton rythme. Un nouveau gagnant chaque semaine.",
-               "Dieselbe Quest. Dein eigenes Tempo. Jede Woche ein neuer Sieger."),
-            variant="peach",
-        )
+        st.caption(tx("Same quest. Your own pace. A new winner every week.",
+                      "A mesma missão. Ao teu ritmo. Um novo vencedor a cada semana.",
+                      "La même quête. À ton rythme. Un nouveau gagnant chaque semaine.",
+                      "Dieselbe Quest. Dein eigenes Tempo. Jede Woche ein neuer Sieger."))
     else:
-        st.markdown('<div class="lq-eyebrow">' + tx("Squad", "Equipa", "Équipe", "Team") + '</div>', unsafe_allow_html=True)
         st.title(tx("Better together", "Melhores juntos", "Ensemble, c'est mieux", "Gemeinsam besser"))
-        hero(
-            tx("Shared quests", "Missões partilhadas", "Quêtes communes", "Gemeinsame Quests"),
-            tx("Grow with your friends", "Cresce com os teus amigos", "Progresse avec tes amis", "Wachse mit deinen Freunden"),
-            tx("Share real experiences and complete quests together.",
-               "Partilha experiências reais e completa missões em conjunto.",
-               "Partage de vraies expériences et réalise des quêtes en équipe.",
-               "Teilt echte Erlebnisse und erledigt gemeinsam Quests."),
-            variant="lilac",
-        )
+        st.caption(tx("Share real experiences and complete quests together.",
+                      "Partilha experiências reais e completa missões em conjunto.",
+                      "Partage de vraies expériences et réalise des quêtes en équipe.",
+                      "Teilt echte Erlebnisse und erledigt gemeinsam Quests."))
 
     state, error = rpc(api, 'get_social_state')
 
@@ -123,16 +112,15 @@ def render_social(api, competition=False):
 
 def render_squad_ranking(api, squad):
     """This week's XP for the members of one squad (from the weekly leaderboard, matched by name)."""
-    board, error = rpc(api, 'get_weekly_leaderboard')
-    if error or not isinstance(board, list):
+    board, error = rpc(api, 'get_squad_leaderboard', {'squad_id_input':squad['id']})
+    if error or not isinstance(board,list):
         st.caption(tx("This week's ranking could not be loaded.", "Não foi possível carregar a classificação desta semana.",
                       "Impossible de charger le classement de la semaine.", "Die Rangliste dieser Woche konnte nicht geladen werden."))
         return
-    scores = {r.get('display_name'): r for r in board}
-    rows = [{'name': m['name'] or '?',
-             'points': (scores.get(m['name']) or {}).get('weekly_points') or 0,
-             'quests': (scores.get(m['name']) or {}).get('quests_completed') or 0}
-            for m in squad['members']]
+    scores={r['user_id']:r for r in board}
+    rows=[{'name':m['name'] or '?','points':(scores.get(m['id']) or {}).get('weekly_points',0),
+           'quests':(scores.get(m['id']) or {}).get('quests_completed',0),
+           'is_me':m['id']==st.session_state.user['id']} for m in squad['members']]
     squad_ranking(
         rows, st.session_state.profile.get('display_name', ''),
         tx("This week in your squad", "Esta semana na tua equipa", "Cette semaine dans ton équipe", "Diese Woche in deinem Team"),
@@ -157,6 +145,16 @@ def render_squads(api, state):
                 st.subheader(plain_markdown(squad['name']))
                 member_chips([m['name'] for m in squad['members']])
                 render_squad_ranking(api, squad)
+                with st.expander(tx("Manage squad", "Gerir equipa", "Gérer l'équipe", "Team verwalten")):
+                    st.caption(tx("You keep your XP and history. Use the invite code to rejoin.",
+                                  "Manténs o XP e o histórico. Usa o código para voltar a entrar.",
+                                  "Tu conserves tes XP et ton historique. Le code permet de revenir.",
+                                  "XP und Verlauf bleiben erhalten. Mit dem Code kannst du wieder beitreten."))
+                    st.code(squad['invite_code'],language=None)
+                    if st.button(tx("Leave squad", "Sair da equipa", "Quitter l'équipe", "Team verlassen"),key='leave_'+str(squad['id'])):
+                        act(api,'leave_squad',{'squad_id_input':squad['id']},
+                            tx("You left the squad.","Saíste da equipa.","Tu as quitté l'équipe.","Du hast das Team verlassen."))
+
 
                 with st.expander(tx("Invite a friend", "Convidar um amigo", "Inviter un ami", "Freund einladen")):
                     st.write(tx(
@@ -200,6 +198,13 @@ def render_squads(api, state):
                             on_change=queue_squad_confirmation,
                             args=(quest['id'],)
                         )
+
+                    names=[m['name'] for m in squad['members'] if m['id'] in quest['confirmed']]
+                    count=len(quest['confirmed'])
+                    st.caption(tx(f"{count}/2 confirmations needed",f"{count}/2 confirmações necessárias",
+                                  f"{count}/2 confirmations nécessaires",f"{count}/2 Bestätigungen benötigt"))
+                    if names:
+                        st.text(tx("Confirmed: ","Confirmaram: ","Ont confirmé : ","Bestätigt: ")+', '.join(names))
 
                 if len(squad['members']) < 2:
                     st.info(tx(
@@ -381,7 +386,26 @@ def render_competitions(api,state):
                     if st.button(tx('Accept invitation','Aceitar convite','Accepter l\'invitation','Einladung annehmen'),key='accept_'+pair['id']):
                         act(api,'join_friend_duel',{'invite':pair['code']},tx('Challenge accepted.','Desafio aceite.','Défi accepté.','Herausforderung angenommen.'))
 
+                action='cancel' if mine else 'decline'
+                if st.button(tx('Cancel invitation' if mine else 'Decline invitation',
+                                'Cancelar convite' if mine else 'Recusar convite',
+                                "Annuler l'invitation" if mine else "Refuser l'invitation",
+                                'Einladung zurückziehen' if mine else 'Einladung ablehnen'),key='close_pending_'+pair['id']):
+                    act(api,'close_friend_duel',{'pair_id':pair['id'],'action':action},
+                        tx('Invitation closed.','Convite encerrado.','Invitation fermée.','Einladung geschlossen.'))
                 continue
+            closed=pair['status'] in ('cancelled','declined')
+            if closed:
+                st.caption(tx('Competition ended. Your results are kept.','Competição terminada. Os resultados ficam guardados.',
+                              'Défi terminé. Les résultats sont conservés.','Wettbewerb beendet. Die Ergebnisse bleiben erhalten.'))
+            elif pair.get('closed_at'):
+                st.info(tx("Ends after today's deadline. Today's results still count.",
+                           'Termina após o prazo de hoje. Os resultados de hoje continuam a contar.',
+                           "Se termine après l'échéance du jour. Les résultats du jour comptent encore.",
+                           'Endet nach der heutigen Frist. Die heutigen Ergebnisse zählen noch.'))
+            elif st.button(tx('End competition','Terminar competição','Terminer le défi','Wettbewerb beenden'),key='end_'+pair['id']):
+                act(api,'close_friend_duel',{'pair_id':pair['id'],'action':'end'},
+                    tx("Competition will end after today.","A competição termina após hoje.","Le défi se termine après aujourd'hui.","Der Wettbewerb endet nach heute."))
             days=pair['days']
             current=next((d for d in days if d['day']==state['today']),None)
             week_days=[d for d in days if d['day']>=state['week_start'] and d['settled']]
@@ -392,7 +416,7 @@ def render_competitions(api,state):
             b.metric(tx(f'{friend_name}’s wins',f'Vitórias de {friend_name}',f'Victoires de {friend_name}',f'Siege von {friend_name}'),
                      sum(d['winner']==friend_id for d in week_days))
 
-            if current:
+            if current and not closed:
                 scores={s['user_id']:s['value'] for s in current['scores']}
                 st.markdown('**'+quest_text(current['title'])+'**')
                 st.caption(tx('Today · ','Hoje · ','Aujourd\'hui · ','Heute · ')+state['today']+tx(' · the exact same quest for both of you',

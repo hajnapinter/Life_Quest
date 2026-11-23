@@ -70,7 +70,8 @@ def ready_user(backend, email, name="Ana", categories=("Fitness", "Languages"), 
 
 
 def go(at, page):
-    at.radio(key="current_page").set_value(page).run()
+    at.session_state.current_page=page
+    at.run()
     assert not at.exception, at.exception
     return at
 
@@ -106,6 +107,7 @@ def test_new_user_signs_up_and_finishes_onboarding(backend):
     at.radio(key="ob_shown").set_value(3).run()
     button(at, "Continue →").click().run()
     assert at.title[0].value.startswith("Your next chapter is ready")
+    at.selectbox(key="ob_preferences_target_language").set_value("ja").run()
     button(at, "Prepare my quests →").click().run()
     assert not at.exception, at.exception
 
@@ -119,7 +121,7 @@ def test_new_user_signs_up_and_finishes_onboarding(backend):
     assert "Ana" in everything_text(at)
 
 
-def test_free_accounts_cannot_pick_a_fourth_pillar(backend):
+def test_every_account_can_pick_more_than_three_pillars(backend):
     at = new_app(signup=True)
     field(at, "Email").input("limit@example.com")
     field(at, "Password").input("password123")
@@ -130,9 +132,9 @@ def test_free_accounts_cannot_pick_a_fourth_pillar(backend):
     button(at, "Make it mine →").click().run()
     for pillar in ("Fitness", "Health", "Social"):
         at.checkbox(key="ob_pick_" + pillar).check().run()
-    assert at.checkbox(key="ob_pick_Finance").disabled
+    assert not at.checkbox(key="ob_pick_Finance").disabled
     assert not at.checkbox(key="ob_pick_Fitness").disabled
-    assert any("Pro unlocks all 7" in c.value for c in at.caption)
+    assert not any("Pro unlocks" in c.value for c in at.caption)
 
 
 def test_onboarding_requires_a_nickname(backend):
@@ -277,17 +279,17 @@ def test_adding_a_pillar_creates_its_quests(backend):
     assert len([q for q in backend.quests if q["category"] == "Health" and q["status"] == "active"]) == 5
 
 
-def test_free_plan_allows_at_most_three_pillars(backend):
+def test_every_account_can_choose_all_seven_pillars(backend):
     ready_user(backend, "ana@example.com", categories=("Fitness", "Health", "Social"))
     at = go(log_in("ana@example.com"), "⚙️ Settings")
-    assert at.multiselect(key="pillars_setting").proto.max_selections == 3
+    assert at.multiselect(key="pillars_setting").proto.max_selections == 7
 
 
-def test_pro_accounts_can_choose_all_pillars(backend):
+def test_old_subscription_metadata_does_not_render_subscription_ui(backend):
     ready_user(backend, "ana@example.com", metadata={"lifequest_pro": {"active": True, "plan": "yearly", "since": "2026-11-18"}})
     at = go(log_in("ana@example.com"), "⚙️ Settings")
     assert at.multiselect(key="pillars_setting").proto.max_selections == 7
-    assert any('class="lq-pro on"' in m.value for m in at.markdown)   # the "You're on Pro" card
+    assert not any('Subscribe to Pro' in b.label for b in at.button)   # the "You're on Pro" card
 
 
 def test_city_search_saves_the_chosen_city_once(backend):

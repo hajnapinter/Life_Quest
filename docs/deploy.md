@@ -63,3 +63,7 @@ Open the App URL in a private window and follow the demo checklist at the end of
 | Google sign-in says it is not configured for this address | `[app] url` is missing or doesn't match the App URL exactly (including `https://` and the final `/`). |
 | Confirmation email links open `127.0.0.1` | Update the Site URL in Supabase (step 3). |
 | Build fails while installing packages | Check the Python version is 3.11 or newer (step 2.5). |
+
+## Product fixes and reminders
+
+After the existing SQL migrations (including social play and security hardening), apply `supabase/product-fixes.sql`, then `supabase/reminders.sql`. Both are installed on the shared project. New deployments also need the private Actions Secrets and worker hash described in [reminders.md](reminders.md). Never store SMTP credentials in source or use a service-role key.

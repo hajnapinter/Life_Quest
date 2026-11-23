@@ -1,0 +1,42 @@
+name: Daily reminders
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: Verify credentials without sending mail
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: lifequest-reminders
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Send opted-in reminders
+        env:
+          SUPABASE_URL: ${{ secrets.REMINDER_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.REMINDER_SUPABASE_ANON_KEY }}
+          REMINDER_WORKER_KEY: ${{ secrets.REMINDER_WORKER_KEY }}
+          SMTP_HOST: smtp-relay.brevo.com
+          SMTP_PORT: '587'
+          SMTP_USERNAME: ${{ secrets.REMINDER_SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.REMINDER_SMTP_PASSWORD }}
+          SMTP_SENDER: ${{ secrets.REMINDER_SMTP_SENDER }}
+          APP_URL: https://life-quest-team.streamlit.app/
+          CHECK_ONLY: ${{ inputs.check_only }}
+        run: |
+          if [ "$CHECK_ONLY" = 'true' ]; then
+            python scripts/send_reminders.py --check
+          else
+            python scripts/send_reminders.py
+          fi

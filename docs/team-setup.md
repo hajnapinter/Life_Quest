@@ -57,3 +57,7 @@ uv run pytest
 Current committed Python suite: 178 tests passed. Additional UI checks covered checkbox completion, failed-save recovery, rapid checks and preserved statistics. Transactional database checks covered replacements, duplicate-XP protection, squad confirmation, pair-specific scores, deadline enforcement and weekly rewards. All database verification fixtures were rolled back.
 
 Scores and real-life completion are self-reported. Daily and weekly competitions use UTC. Closed results settle the next time either participant opens the social page; no paid scheduler is required. See `docs/social-play.md` and `docs/ai-quests-setup.md` for behaviour and limits.
+
+## Product fixes and reminders
+
+After the existing SQL migrations (including social play and security hardening), apply `supabase/product-fixes.sql`, then `supabase/reminders.sql`. Both are installed on the shared project. New deployments also need the private Actions Secrets and worker hash described in [reminders.md](reminders.md). Never store SMTP credentials in source or use a service-role key.

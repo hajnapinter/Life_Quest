@@ -1,4 +1,4 @@
-"""Profile photo, avatar ring (Pro) and device notifications.
+"""Profile photo, avatar ring and device notifications.
 
 Stored in the user's auth metadata under `lifequest_profile`:
     {"photo": "data:image/jpeg;base64,...", "ring": "lilac", "push": true}
@@ -15,7 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from design import AVATAR_RINGS, avatar_html
-from pro import is_pro, save_user_data
+from profile_data import save_user_data
 
 PHOTO_SIZE = 80
 MAX_PHOTO_CHARS = 9000  # keeps the saved photo small enough for the login token
@@ -23,33 +23,33 @@ MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # reject huge uploads before decoding them
 
 TEXT = {
     "en": {"photo": "Profile photo", "upload": "Upload a photo", "remove": "Remove photo", "ring": "Avatar style",
-           "ring_pro": "✨ Pro: choose your avatar ring", "saved": "Profile updated.", "bad": "That file isn't an image we can read. Try a JPG or PNG.",
+           "ring_hint": "Choose your avatar ring", "saved": "Profile updated.", "bad": "That file isn't an image we can read. Try a JPG or PNG.",
            "error": "We couldn't save this. Please try again.",
-           "push": "Phone and laptop notifications", "push_help": "Get a nudge on this device when quests are waiting.",
+           "push": "Device notification test", "push_help": "Send a test on this device. Background push delivery is not enabled.",
            "enable": "Turn on for this device", "on": "Notifications are on for this device.",
            "blocked": "Notifications are blocked. Allow them in your browser settings.",
            "unsupported": "This browser doesn't support notifications. On iPhone, add Life Quest to your Home Screen first.",
            "test_title": "Life Quest 🌱", "test_body": "Notifications are on. Small steps, every day!"},
     "pt": {"photo": "Foto de perfil", "upload": "Carregar uma foto", "remove": "Remover foto", "ring": "Estilo do avatar",
-           "ring_pro": "✨ Pro: escolhe o anel do teu avatar", "saved": "Perfil atualizado.", "bad": "Não conseguimos ler esse ficheiro. Experimenta um JPG ou PNG.",
+           "ring_hint": "Escolhe o anel do teu avatar", "saved": "Perfil atualizado.", "bad": "Não conseguimos ler esse ficheiro. Experimenta um JPG ou PNG.",
            "error": "Não foi possível guardar. Tenta novamente.",
-           "push": "Notificações no telemóvel e portátil", "push_help": "Recebe um lembrete neste dispositivo quando houver missões à tua espera.",
+           "push": "Teste de notificação neste dispositivo", "push_help": "Envia um teste neste dispositivo. O envio de notificações em segundo plano não está ativo.",
            "enable": "Ativar neste dispositivo", "on": "As notificações estão ativas neste dispositivo.",
            "blocked": "As notificações estão bloqueadas. Permite-as nas definições do navegador.",
            "unsupported": "Este navegador não suporta notificações. No iPhone, adiciona primeiro o Life Quest ao ecrã principal.",
            "test_title": "Life Quest 🌱", "test_body": "Notificações ativas. Pequenos passos, todos os dias!"},
     "fr": {"photo": "Photo de profil", "upload": "Ajouter une photo", "remove": "Supprimer la photo", "ring": "Style d'avatar",
-           "ring_pro": "✨ Pro : choisis l'anneau de ton avatar", "saved": "Profil mis à jour.", "bad": "Impossible de lire ce fichier. Essaie un JPG ou un PNG.",
+           "ring_hint": "Choisis l'anneau de ton avatar", "saved": "Profil mis à jour.", "bad": "Impossible de lire ce fichier. Essaie un JPG ou un PNG.",
            "error": "Impossible d'enregistrer. Réessaie.",
-           "push": "Notifications sur téléphone et ordinateur", "push_help": "Reçois un rappel sur cet appareil quand des quêtes t'attendent.",
+           "push": "Test de notification sur cet appareil", "push_help": "Envoie un test sur cet appareil. Les notifications en arrière-plan ne sont pas activées.",
            "enable": "Activer sur cet appareil", "on": "Les notifications sont activées sur cet appareil.",
            "blocked": "Les notifications sont bloquées. Autorise-les dans les réglages du navigateur.",
            "unsupported": "Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord Life Quest à l'écran d'accueil.",
            "test_title": "Life Quest 🌱", "test_body": "Notifications activées. De petits pas, chaque jour !"},
     "de": {"photo": "Profilfoto", "upload": "Foto hochladen", "remove": "Foto entfernen", "ring": "Avatar-Stil",
-           "ring_pro": "✨ Pro: Wähle deinen Avatar-Ring", "saved": "Profil aktualisiert.", "bad": "Diese Datei können wir nicht lesen. Versuche ein JPG oder PNG.",
+           "ring_hint": "Wähle deinen Avatar-Ring", "saved": "Profil aktualisiert.", "bad": "Diese Datei können wir nicht lesen. Versuche ein JPG oder PNG.",
            "error": "Konnte nicht gespeichert werden. Bitte versuche es erneut.",
-           "push": "Benachrichtigungen auf Handy und Laptop", "push_help": "Erhalte auf diesem Gerät einen Hinweis, wenn Quests warten.",
+           "push": "Benachrichtigung auf diesem Gerät testen", "push_help": "Sende einen Test auf diesem Gerät. Hintergrund-Push ist nicht aktiviert.",
            "enable": "Auf diesem Gerät aktivieren", "on": "Benachrichtigungen sind auf diesem Gerät aktiv.",
            "blocked": "Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen.",
            "unsupported": "Dieser Browser unterstützt keine Benachrichtigungen. Auf dem iPhone füge Life Quest zuerst zum Home-Bildschirm hinzu.",
@@ -72,9 +72,9 @@ def photo() -> str | None:
 
 
 def ring() -> str:
-    """Pro users keep the ring they picked; everyone else gets the default."""
+    """Use a valid saved avatar style."""
     chosen = prefs().get("ring", "peach")
-    return chosen if is_pro() and chosen in AVATAR_RINGS else "peach"
+    return chosen if chosen in AVATAR_RINGS else "peach"
 
 
 def _save(api, changes: dict, lang: str) -> None:
@@ -106,7 +106,7 @@ def shrink_photo(raw: bytes) -> str | None:
 
 
 def render_photo_setting(api, lang: str) -> None:
-    """Photo upload for everyone; ring picker for Pro."""
+    """Photo upload and avatar style picker."""
     t = _t(lang)
     if st.session_state.get("profile_toast"):
         st.toast(st.session_state.pop("profile_toast"), icon="📸")
@@ -122,16 +122,15 @@ def render_photo_setting(api, lang: str) -> None:
                 _save(api, {"photo": url}, lang)
         if photo() and st.button(t["remove"], key="photo_remove"):
             _save(api, {"photo": None}, lang)
-        if is_pro():
-            st.caption(t["ring_pro"])
-            current = prefs().get("ring", "peach")
-            name = st.session_state.profile.get("display_name", "")
-            previews = "".join(avatar_html(name, photo(), r, size=40) for r in AVATAR_RINGS)
-            st.markdown(f'<div class="lq-rings">{previews}</div>', unsafe_allow_html=True)
-            choice = st.segmented_control(t["ring"], list(AVATAR_RINGS), default=current, key="ring_pick",
-                                          format_func=str.capitalize, label_visibility="collapsed")
-            if choice and choice != current:
-                _save(api, {"ring": choice}, lang)
+        st.caption(t["ring_hint"])
+        current = prefs().get("ring", "peach")
+        name = st.session_state.profile.get("display_name", "")
+        previews = "".join(avatar_html(name, photo(), r, size=40) for r in AVATAR_RINGS)
+        st.markdown(f'<div class="lq-rings">{previews}</div>', unsafe_allow_html=True)
+        choice = st.segmented_control(t["ring"], list(AVATAR_RINGS), default=current, key="ring_pick",
+                                      format_func=str.capitalize, label_visibility="collapsed")
+        if choice and choice != current:
+            _save(api, {"ring": choice}, lang)
 
 
 def render_push_setting(api, lang: str) -> None:

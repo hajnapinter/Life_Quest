@@ -10,7 +10,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import account
 import onboarding_text
-import pro
 from onboarding import PILLARS, QUESTS_SHOWN
 from quest_plan import completed_csv, progress_hint, quest_xp, weekly_recap
 
@@ -131,15 +130,11 @@ def test_every_pillar_is_translated_with_five_levels(lang):
         assert len(levels) == len(PILLARS[pillar][3]) == 5
 
 
-@pytest.mark.parametrize("module", [pro, account])
+@pytest.mark.parametrize("module", [account])
 def test_settings_texts_have_the_same_keys_in_every_language(module):
     english = set(module.TEXT["en"])
     for lang in LANGS:
         assert set(module.TEXT[lang]) == english
-
-
-def test_pro_lists_three_coming_soon_features_everywhere():
-    assert {len(pro.TEXT[lang]["soon"]) for lang in pro.TEXT} == {3}
 
 
 @pytest.mark.parametrize("key", ["step", "hi_title", "pillars_limit", "final_level", "final_per"])

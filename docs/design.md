@@ -59,7 +59,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 
 | Need | Use |
 |---|---|
-| Screen greeting with avatar, name and XP | `greeting(hello, name, xp, pro, photo, ring)` |
+| Screen greeting with avatar, name and XP | `greeting(hello, name, xp, photo, ring)` |
 | One focus card per screen (gradient + sprout) | `hero(tag, title, body, variant="peach", sprout=True)`; **max one per screen** |
 | Pillar section header | `pillar_header(category, icon, label, caption)` |
 | Activity over time for a pillar | `heatmap(category, activity, title, less, more, weekdays)`; replaces bar charts |
@@ -90,19 +90,19 @@ The app should feel alive but calm. All motion lives in `design.py`:
 
 Five quests are always kept ready per pillar. Users choose how many to **see** (1–5) per pillar: once in onboarding (`onboarding.QUESTS_SHOWN`, applied to every chosen pillar) and per pillar in Settings. It is a lighter view, not a goal: when one is finished the next ready quest appears. Stored as `quests_shown: {pillar: n}` inside the `lifequest_onboarding` user metadata; read it with `ai_quest_ui.quests_shown(category)` (default 5) and pass it to `render_quest_cards(..., limit=n)`.
 
-## Pro (demo subscription) and city search
+## Personalisation and navigation
 
-- `pro.py`: Life Quest Pro is a **demo** (no real payment). €3.99/month or €29.99/year. State in auth metadata `lifequest_pro` (`is_pro()`).
-- Free accounts get up to `FREE_PILLAR_LIMIT` (3) pillars in onboarding and Settings; Pro gets all 7. Use `pillar_limit()` anywhere pillars are chosen.
-- Pro card: dark plum gradient (offer) or peach gradient (active), `PRO` badge (`.lq-pro-badge`). Features that would need paid APIs are listed under "Coming soon"; never present them as working.
-- `places.py`: `city_picker()` searches cities with the free Photon/OpenStreetMap API (only the typed text is sent) and saves a label like "Lisbon, Portugal". The city never changes quest text; Pro uses only its **country**.
+- All seven pillars and avatar rings are available to everyone. No subscription modes.
+- Five main navigation items: Home, Recap, Squad, Competition, Settings. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
+- `places.py` searches cities via Photon. City, country, target language and preferred session length personalise quests through `personalization.py`; numeric progression stays in `quest_plan.py`.
+- Clearly disclose that location and preferences are sent to Requesty for generation; never send names or email addresses.
+- Daily opt-in email reminders use the hourly worker. Device notifications remain a test only.
 
 ## Profile photo, avatar and device notifications (`account.py`)
 
 - Everyone can upload a profile photo; it is cropped to 80×80 JPEG and stored in auth metadata `lifequest_profile.photo` (no Storage bucket exists). Show avatars with `avatar_html()` / `profile_card(..., photo, ring)` / `greeting(..., photo, ring)`.
-- Pro can choose an avatar ring (`AVATAR_RINGS`: peach, lilac, mint, ocean, gold, sunset); free users get peach.
+- Everyone can choose an avatar ring (`AVATAR_RINGS`: peach, lilac, mint, ocean, gold, sunset).
 - "Phone and laptop notifications" saves a preference and asks the browser for permission on this device (test notification). Scheduled delivery while the app is closed would need a push server (not built).
-- Do not write "demo" disclaimers in the UI; everyone on the team knows Pro is a demo.
 
 ## No loading fade
 
@@ -114,7 +114,7 @@ Streamlit normally dims the page while it reruns after a click. `design.py` turn
 2. Every user-visible string goes through the existing translation pattern (en / pt / fr / de). Never ship an English-only label.
 3. Pillar emoji (`PILLARS[c][0]`) sit inside a coloured icon tile or before a title, never as decoration on random lines.
 4. Prefer white rows and tiles over `st.dataframe` for anything the user reads for fun (leaderboards, histories). Tables are fine for long records.
-5. Must work at phone width (~390px) **and** on desktop: no fixed widths, no horizontal scrolling except the nav.
+5. Must work at phone width (~390px) **and** on desktop: no fixed widths, no horizontal scrolling including the nav.
    - Desktop (≥960px) widens the page to 1080px and moves the nav to a sticky pill at the top.
    - Use `st.columns` for desktop layouts (Streamlit stacks them on phones): Home shows 2 pillars per row; pillar, Squad and Settings pages use a main column + side column (`[3, 2]` or `2`).
 6. Respect `prefers-reduced-motion` for any new animation (see the existing media query).

@@ -11,20 +11,20 @@ In the walkthrough, the teaching staff open this repository and ask high-level q
 | 3 | `quest_plan.py` → `slot_plan` | "This is the heart of the app: five habit tracks per pillar. After a success the next target goes up; after 'too hard' it goes down, within fixed limits. It's pure Python, so it's easy to test." |
 | 4 | `supabase/five-quest-slots.sql` → `save_quest_slots` | "Completing a quest is **one database transaction**: mark it done, add XP, save the next quest. If anything fails, nothing is half-saved, and completing twice does nothing." |
 | 5 | `ai_quests.py` → `validate_batch` | "AI only rewords quests. We never trust its answer: wrong count, changed target, too long, timers on experience quests… all rejected, and then the habit library is used instead." |
-| 6 | `tests/` + `.github/workflows/tests.yml` | "170 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
+| 6 | `tests/` + `.github/workflows/tests.yml` | "187 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
 | 7 | `docs/` | Architecture, security audit, design rules, deployment. |
 
 ## 2. Questions you should be able to answer
 
 ### Architecture and data
 **Where is the data stored?**
-In Supabase (hosted PostgreSQL). 13 tables: profiles, quests (`ai_quests`), squads, squad quests and confirmations, 1v1 competitions, rewards. Small per-user settings (onboarding answers, quests shown, Pro, photo) are in the login's *user metadata*. The login token lives only in Streamlit's server memory. Secrets are in Streamlit Secrets, never in Git.
+In Supabase (hosted PostgreSQL). Tables include profiles, quests (`ai_quests`), squads, squad quests and confirmations, 1v1 competitions, rewards. Small per-user settings (onboarding answers, quests shown, preferences, photo) are in the login's *user metadata*. The access token lives in server memory; the rotating refresh token is also stored in tab-scoped sessionStorage for verified reload restoration. Secrets are in Streamlit Secrets, never in Git.
 
 **Why Streamlit and Supabase?**
 Streamlit lets us build the whole UI in Python, the language of the course. Supabase gives us accounts, a real Postgres database and Row Level Security without writing our own backend.
 
 **Why are some settings in user metadata instead of tables?**
-The shared database was already set up; metadata needed no migration for the whole team. The limit: users can edit their own metadata, so nothing security-relevant may depend on it. That's why XP is in a protected table and Pro is only a demo.
+The shared database was already set up; metadata needed no migration for the whole team. The limit: users can edit their own metadata, so nothing security-relevant may depend on it. That's why XP is in a protected table and metadata contains preferences only.
 
 **What happens when I tick a quest?**
 The checkbox queues the completion → the app calls `save_quest_slots` → the database marks it done, adds 10 + 5 × difficulty XP and inserts the next quest for that slot → the app reloads and shows the new quest with "↑ up from … last time".
@@ -34,9 +34,9 @@ All styling is in `design.py` and `.streamlit/config.toml`; rules for people and
 
 ### Tests
 **What do the tests cover?**
-- Unit tests for the pure logic: quest progression, statistics, recap, CSV, AI validation, city search, Pro rules, photos.
+- Unit tests for the pure logic: quest progression, statistics, recap, CSV, AI validation, city search, all-pillar availability, photos.
 - Screen tests on the real app: invalid login and sign-up input, Supabase unreachable.
-- **19 workflow tests** that drive the real app like a user against a fake Supabase: sign-up and onboarding, completing quests, recap, squads (create, join, wrong code, two confirmations), Settings, Pro limits, logout.
+- **19 workflow tests** that drive the real app like a user against a fake Supabase: sign-up and onboarding, completing quests, recap, squads (create, join, wrong code, two confirmations), Settings, logout.
 - Security checks: no secrets in the repo, XP not writable.
 - The Google sign-in script (PKCE) in JavaScript.
 
@@ -55,7 +55,7 @@ Tests must be fast, repeatable and must not write into our shared database. The 
 
 **Which external APIs do you use and what do you send them?**
 - **Photon (OpenStreetMap):** only the text typed into the city box.
-- **Requesty (AI):** pillars, starting levels and quest feedback. Never your name or email.
+- **Requesty (AI):** pillars, starting levels, quest feedback, city/country and preferences. Never your name or email.
 
 ### Security
 **Did you do a security review?**
@@ -78,21 +78,15 @@ Three direct ones (`streamlit`, `pillow`, `pytest`), pinned to exact versions, a
 
 ### Limits and how it could change
 **What are the main limits?**
-- Pro is a demo (its flag is user-editable metadata).
 - The photo travels inside the login token.
-- The squad ranking matches people by name.
+- The squad ranking uses stable user IDs and requires squad membership.
 - Quests are self-reported.
 - There's no push server, so notifications are only browser permission plus a test notification.
 
 **How would you scale or improve it?**
-- Real payments (Stripe) writing Pro status to a server-only table.
 - Photos in Supabase Storage.
-- The leaderboard by user id.
+- Automated database integration tests in CI.
 - Database tests with a local Supabase in CI.
-- The paid APIs from the Pro "coming soon" list (places, weather, health sync).
-
-**Why is Pro priced like that?**
-€3.99 a month or €29.99 a year, in line with other wellbeing apps. It shows the business model; paid-API features are a roadmap.
 
 ### Team process
 **How did you work as a team?**
@@ -107,3 +101,5 @@ Three direct ones (`streamlit`, `pillow`, `pytest`), pinned to exact versions, a
 2. Split the questions above: each person rehearses one section out loud, then **swap**, because anyone can be asked anything.
 3. Do the 5-minute tour once each, with someone else asking "why?" after every answer.
 4. Run `uv run pytest` together once, so everyone has seen the tests pass.
+
+Scheduled email uses a restricted worker credential, a daily outbox and explicit opt-in. Explain why SMTP acceptance cannot guarantee inbox delivery and why ambiguous failures are not automatically retried. See `docs/reminders.md`.
