@@ -1,6 +1,6 @@
 # Privacy operations — administrators only
 
-Controller and contact approved by the user: **Hajna Pinter — 81324@novasbe.pt**.
+Controller and contact: **Hajna Pinter — 81324@novasbe.pt**.
 Read this mailbox daily. Settings opens a user-sent email draft; it does not submit a request to a database or automatically erase anything. Acknowledge requests, record the received date and normally respond within one month. Explain any lawful extension/refusal. Verify identity proportionately through the account email; never request passwords. Arrange a secure alternative if that email is inaccessible. Do not publish request correspondence in issues or commits.
 
 For access/portability: securely provide the verified requester's own Auth identity/metadata, profile, quests, completions, memberships, confirmations, scores, rewards and reminder records. A quest-history CSV alone is not a full account export. Exclude other users' personal data. Rectification, restriction and objections need case-by-case review. Review correspondence retention after closing each request rather than keeping it indefinitely.

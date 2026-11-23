@@ -56,6 +56,10 @@ Tests must be fast, repeatable and must not write into our shared database. The 
 **Which external APIs do you use and what do you send them?**
 - **Photon (OpenStreetMap):** only the text typed into the city box.
 - **Requesty (AI):** pillars, starting levels, quest feedback, city/country and preferences. Never your name or email.
+- **Brevo (email):** the email address and the text of confirmation and opted-in reminder emails.
+- **Google (sign-in):** handled by Supabase; we only receive the verified identity.
+
+What happens when each service fails is in section 7 of [architecture.md](architecture.md).
 
 ### Security
 **Did you do a security review?**
@@ -108,4 +112,4 @@ Scheduled email uses a restricted worker credential, a daily outbox and explicit
 
 Before presenting, each member should practise sign-up/onboarding with a disposable account, complete one quest and explain atomic XP/progression, compare the habit journey and Recap, show shared squad participation and a 1v1 score, and explain the weekly podium/reset. Show Settings → Your data, your choice and the anonymous Privacy Policy. Do not delete a real account or change real competition scores during rehearsal. Have the controller explain the email-based rights process and why SMTP acceptance is not inbox delivery. Finish by pointing to the passing CI and the owner-only, rolled-back database privacy test.
 
-Prepare screenshots as a network-failure fallback. The team must practise aloud and confirm understanding; this document does not mark that rehearsal complete. See [final check](final-check-2026-11-23.md) for remaining legal, delivery and accessibility limits. Do not submit to Moodle through the coding assistant.
+Prepare screenshots as a network-failure fallback, and practise answering out loud: any of us can be asked about any part. What we verified and the known limits are in [verification.md](verification.md).

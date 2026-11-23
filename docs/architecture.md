@@ -102,18 +102,28 @@ Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs checks/*.test.cj
 
 ## 7. When something it depends on is unavailable
 
-| Service down | What the user sees |
-|---|---|
-| Supabase | A clear message ("could not be reached… check your internet connection"); Google sign-in is disabled instead of broken. No crash (tested). |
-| Requesty AI (or no key, or rate limit) | Quests come from the built-in habit library; a small note says so. Only zero-cost models are ever used. |
-| Photon city search | "City search is unavailable right now. You can skip this…" The city is optional; failures are not cached, so it works again as soon as the service is back. |
-| Google Fonts | The browser falls back to its normal sans-serif font. |
-| Browser notifications not supported | The notifications button explains why (e.g. iPhone needs the app on the Home Screen). |
+Every service the app calls, and what happens when it fails. We check this list before each demo.
+
+| Service | Used for | If it is down or over its limit |
+|---|---|---|
+| Streamlit Community Cloud | Hosting the app | The app is unreachable. A free app that has not been used for a while "sleeps" and takes up to a minute to wake: open the URL before presenting. |
+| Supabase (database + Auth) | Accounts, quests, XP, squads | A clear "could not be reached… check your internet connection" message instead of a crash (tested). Google sign-in is disabled rather than broken. A free project pauses after a long time unused: open the dashboard the day before. |
+| Google sign-in (through Supabase) | "Continue with Google" | The button is disabled with "Google sign-in is not configured for this app address"; email login still works. |
+| Requesty AI: quest wording | Wording new quests | Quests come from the built-in habit library, with a small note saying so. Only zero-cost models are used. Free limits are hit by several requests at once, so the library is also the fallback then. |
+| Requesty AI: reflections | The progress card's short reflection | A local encouragement, clearly labelled "AI reflection is temporarily unavailable". |
+| Requesty AI: translation | Translating AI-worded quests | The original text stays visible with a note; tasks and progress are unchanged. Library quests are translated locally and never need AI. |
+| Photon / OpenStreetMap | City search | "City search is unavailable right now…". The city is optional, and failures are not cached, so it works again as soon as the service is back. |
+| Brevo (email) | Confirmation and reminder emails | Sign-up still succeeds; the user can resend the confirmation after 60 seconds. Refused reminders are retried up to three times; unclear failures are not retried, to avoid duplicates. |
+| GitHub Actions | Hourly reminder and weekly-prize job | Reminders arrive late. Weekly prizes are also settled when the Leaderboard is opened, so they catch up. |
+| Google Fonts | The Inter Tight font | The browser uses its normal sans-serif font. |
+| Browser notifications | Device test notification | The button explains why it is unavailable (for example, iPhone needs the app on the Home Screen). |
 
 ## 8. How it could change
 
 - Photos in Supabase Storage.
-- Database tests for the SQL functions (e.g. with a local Supabase in CI).
+- Run the `supabase/check-*.sql` database tests automatically in CI against a local Supabase.
+- Switch to a free AI model that keeps no data and does not train on it (see [verification.md](verification.md)).
+- An in-app button to delete your account, instead of an email request.
 
 ## 9. Demo checklist (before presenting)
 
@@ -133,11 +143,11 @@ Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs checks/*.test.cj
 - API errors are converted to user-friendly messages without exposing raw database details.
 - `tests/test_token_refresh.py` covers token rotation and refresh failures.
 - `tests/test_api_errors.py` covers malformed responses and safe error messages.
-- The latest local Python test run passed 223 tests (23 November 2026).
+- Current totals: 238 Python tests and 8 JavaScript tests, all passing on `main`.
 
-### Security verification still required
+### Security checks on the live database
 
-The SQL files document the intended Row Level Security policies and database permissions. Before any public release, verify that those policies, grants, and security-definer functions are correctly configured in the actual Supabase project. Passing local tests does not establish that the live database is secure.
+Passing app tests does not prove the real database is secure, so we also ran the `supabase/check-*.sql` scripts against the live project. They create made-up users, assert that Row Level Security, permissions and the XP functions behave as intended, and roll everything back (48 checks, all passed). Details: [verification.md](verification.md).
 
 
 ### Quest display languages
@@ -156,9 +166,9 @@ task is never silently substituted. Translation sends only quest text, not profi
 
 `supabase/product-fixes.sql` wraps the existing completion transaction to record exact XP and a personalisation context snapshot; numeric progression and same-day replacement are unchanged. `get_activity_history` includes social rewards, while the member-only squad leaderboard uses stable user IDs. Members can leave squads; pending duels can be declined or cancelled, and active duels end after the current UTC day so today's score remains fair. Social screens refresh every 30 seconds.
 
-Five navigation destinations remain visible: Home, Recap, Squad, Competition and Settings. Pillar pages open within Home. Greeting XP renders after completion processing.
+Six navigation destinations: Home, Recap, Squad, Competition, Settings and Leaderboard. Pillar pages open within Home. Greeting XP renders after completion processing.
 
-`session_component/` implements verified tab-scoped session restoration. `scripts/send_reminders.py`, `supabase/reminders.sql` and `.github/workflows/reminders.yml` implement opt-in localized email and competition settlement. See [reminders.md](reminders.md) for permissions, quotas, retry semantics and operational limits.
+`session_component/` implements the remembered sign-in (up to 30 days, verified by Supabase on every restore; see section 3). `scripts/send_reminders.py`, `supabase/reminders.sql` and `.github/workflows/reminders.yml` implement opt-in localized email and competition settlement. See [reminders.md](reminders.md) for permissions, quotas, retry semantics and operational limits.
 
 `tests/test_product_fixes.py` covers exact recap XP, preserved progression, preferences, navigation, squad leave, session identity checks and no-send SMTP checks. `tests/session.test.cjs` covers storage rotation, logout, project scoping and foreign-message rejection. Fake API tests do not establish real database correctness; live SQL checks are separate.
 
