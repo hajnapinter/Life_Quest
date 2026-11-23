@@ -836,7 +836,7 @@ def render_dashboard() -> None:
         st.session_state.current_page=st.session_state.main_navigation
     current=st.session_state.current_page
     with st.container(key="bottom_navigation"):
-       st.radio("Explore Life Quest",pages,index=pages.index(current) if current in pages else 0,
+       st.radio("Explore Life Quest",pages,index=None if "main_navigation" in st.session_state else (pages.index(current) if current in pages else 0),
                 key="main_navigation",horizontal=True,label_visibility="collapsed",format_func=nav_label,
                 on_change=choose_main_page)
     page=st.session_state.current_page
