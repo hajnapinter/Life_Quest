@@ -23,7 +23,7 @@ from i18n import language_picker, translate_pillar_label
 from places import city_picker, clear_city_picker
 from profile_data import pillar_limit
 from account import photo as account_photo, ring as account_ring, render_photo_setting, render_push_setting
-from browser_session import sync_session
+from browser_session import sync_session, render_restore_status
 from personalization import render_preferences
 from reminder_settings import render_reminder_settings
 from invitations import capture_invitation, render_invitation, valid_invitation
@@ -908,11 +908,16 @@ if st.session_state.access_token:
 
 
 # Persist the rotated token after renewal, before rendering the authenticated app.
-sync_session(api_request,supabase_config()[0])
+restore_status = sync_session(api_request,supabase_config()[0])
 
 if not st.session_state.access_token:
-    render_invitation()
-    render_auth()
+    render_restore_status(restore_status)
+    if restore_status == 'retry':
+        st.stop()
+    # Render components during startup, but reveal the login only after storage replies.
+    with st.container(key='auth_restoring' if restore_status == 'pending' else 'auth_ready'):
+        render_invitation()
+        render_auth()
 elif st.session_state.profile is None:
     if load_user_data():
         if st.session_state.profile is None:

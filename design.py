@@ -38,6 +38,9 @@ HERO_GRADIENTS = {
 }
 
 _CSS = """
+/* Avoid a login flash while the browser restores a verified session. */
+.st-key-auth_restoring {visibility:hidden; height:0; overflow:hidden;}
+
 <style>
 /* ---------- Page ---------- */
 .stMainBlockContainer {max-width:720px; padding-top:2.25rem; padding-bottom:128px;}

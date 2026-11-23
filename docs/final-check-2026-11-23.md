@@ -42,3 +42,9 @@ Use writable temporary cache/tool directories if the host restricts default cach
 - Staff the published rights-request mailbox; fulfil verified requests under the runbook. Account deletion is an administrator action, not an automatic self-service button.
 - Full screen-reader/device accessibility testing and university inbox delivery have not been established.
 - Team rehearsal, explicit approval to publish the repository, and team-performed Moodle submission remain human actions.
+
+## Follow-up review and remembered sign-in
+
+See [the detailed provider and accessibility review](provider-review-2026-11-23.md). Supabase region is now verified as Ireland, Streamlit hosting is US-based, the Requesty key has request logging off, and the current free model advertises training and 30-day retention. The user explicitly declined a model switch. All six signed-in screens passed the 390px overflow/form-name/alt-attribute inspection. Remaining contrast/heading findings and the unsuccessful university mailbox/quarantine lookup are documented rather than marked complete.
+
+The requested session repair now persists only a rotating refresh credential for up to 30 days since authenticated renewal, verifies identity before restoring access, clears both storage types on logout and offers retry after connection failures. Unit/regression checks: **236 Python passed; 8 JavaScript passed**. Live refresh/reopen/logout verification follows deployment. Earlier tab-only documentation is superseded by this change.

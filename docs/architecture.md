@@ -52,7 +52,7 @@ flowchart LR
 `lifequest_onboarding` (answers, starting levels, quests shown per pillar), `lifequest_preferences` (target language and session length), `lifequest_language` (UI language), `lifequest_profile` (photo, avatar ring, notification preference).
 *Why:* the shared database was already set up, and adding columns means a migration for the whole team. *Limit:* the user can write their own metadata, so it must never decide anything security-relevant (see section 5).
 
-**Streamlit session state** (server memory, per browser tab): the login token and the current page. `browser_session.py` stores the rotating refresh token in tab-scoped sessionStorage, restores it after reload and verifies the identity with Supabase. Logout clears storage and revokes the session. Closing the tab normally clears storage; browser session restoration behavior can vary. This is a browser credential, so script-injection prevention remains essential.
+**Streamlit session state** (server memory, per browser tab): the login token and the current page. `browser_session.py` stores only the rotating refresh token in project-scoped localStorage for at most 30 days since an authenticated renewal, with a sessionStorage fallback. It restores and verifies identity with Supabase after reload or reopening the app. Logout clears both stores, notifies other tabs, and revokes the session. Private browsing or blocked storage can limit persistence. This is a browser credential, so script-injection prevention remains essential.
 
 **Secrets** (Supabase URL/key, AI key) live in Streamlit Secrets: `.streamlit/secrets.toml` locally (git-ignored) and the deployment's Secrets settings online. They are never in the repository.
 

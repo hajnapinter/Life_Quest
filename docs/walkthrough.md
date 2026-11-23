@@ -11,14 +11,14 @@ In the walkthrough, the teaching staff open this repository and ask high-level q
 | 3 | `quest_plan.py` → `slot_plan` | "This is the heart of the app: five habit tracks per pillar. After a success the next target goes up; after 'too hard' it goes down, within fixed limits. It's pure Python, so it's easy to test." |
 | 4 | `supabase/five-quest-slots.sql` → `save_quest_slots` | "Completing a quest is **one database transaction**: mark it done, add XP, save the next quest. If anything fails, nothing is half-saved, and completing twice does nothing." |
 | 5 | `ai_quests.py` → `validate_batch` | "AI only rewords quests. We never trust its answer: wrong count, changed target, too long, timers on experience quests… all rejected, and then the habit library is used instead." |
-| 6 | `tests/` + `.github/workflows/tests.yml` | "232 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
+| 6 | `tests/` + `.github/workflows/tests.yml` | "236 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
 | 7 | `docs/` | Architecture, security audit, design rules, deployment. |
 
 ## 2. Questions you should be able to answer
 
 ### Architecture and data
 **Where is the data stored?**
-In Supabase (hosted PostgreSQL). Tables include profiles, quests (`ai_quests`), squads, squad quests and confirmations, 1v1 competitions, rewards. Small per-user settings (onboarding answers, quests shown, preferences, photo) are in the login's *user metadata*. The access token lives in server memory; the rotating refresh token is also stored in tab-scoped sessionStorage for verified reload restoration. Secrets are in Streamlit Secrets, never in Git.
+In Supabase (hosted PostgreSQL). Tables include profiles, quests (`ai_quests`), squads, squad quests and confirmations, 1v1 competitions, rewards. Small per-user settings (onboarding answers, quests shown, preferences, photo) are in the login's *user metadata*. The access token lives in server memory; only the rotating refresh token is saved in project-scoped localStorage for up to 30 days since renewal (sessionStorage fallback); restore is server-verified and logout clears both. Secrets are in Streamlit Secrets, never in Git.
 
 **Why Streamlit and Supabase?**
 Streamlit lets us build the whole UI in Python, the language of the course. Supabase gives us accounts, a real Postgres database and Row Level Security without writing our own backend.

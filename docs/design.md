@@ -139,3 +139,5 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 - Settings omits city editing and the personalization form; stored onboarding preferences remain in effect.
 
 Navigation labels use regular weight (400) and soft dark plum (#55444F). Keep the existing bar shadow; tabs themselves have no inset/click shadow, underline or hover lift. Selection is a light peach pill (#FFF1E6), with a quieter hover tint. Keyboard focus retains a subtle visible outline.
+
+During verified session restoration, hide only the auth form with `.st-key-auth_restoring` and show a translated restoration status. Do not flash a signed-out screen or hide the session component. Connection failures offer retry without discarding credentials.
