@@ -11,7 +11,7 @@ In the walkthrough, the teaching staff open this repository and ask high-level q
 | 3 | `quest_plan.py` → `slot_plan` | "This is the heart of the app: five habit tracks per pillar. After a success the next target goes up; after 'too hard' it goes down, within fixed limits. It's pure Python, so it's easy to test." |
 | 4 | `supabase/five-quest-slots.sql` → `save_quest_slots` | "Completing a quest is **one database transaction**: mark it done, add XP, save the next quest. If anything fails, nothing is half-saved, and completing twice does nothing." |
 | 5 | `ai_quests.py` → `validate_batch` | "AI only rewords quests. We never trust its answer: wrong count, changed target, too long, timers on experience quests… all rejected, and then the habit library is used instead." |
-| 6 | `tests/` + `.github/workflows/tests.yml` | "223 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
+| 6 | `tests/` + `.github/workflows/tests.yml` | "232 automated tests run on every push, including 19 full user workflows against a fake Supabase." |
 | 7 | `docs/` | Architecture, security audit, design rules, deployment. |
 
 ## 2. Questions you should be able to answer
@@ -103,3 +103,9 @@ Three direct ones (`streamlit`, `pillow`, `pytest`), pinned to exact versions, a
 4. Run `uv run pytest` together once, so everyone has seen the tests pass.
 
 Scheduled email uses a restricted worker credential, a daily outbox and explicit opt-in. Explain why SMTP acceptance cannot guarantee inbox delivery and why ambiguous failures are not automatically retried. See `docs/reminders.md`.
+
+## Final rehearsal additions — 23 November
+
+Before presenting, each member should practise sign-up/onboarding with a disposable account, complete one quest and explain atomic XP/progression, compare the habit journey and Recap, show shared squad participation and a 1v1 score, and explain the weekly podium/reset. Show Settings → Your data, your choice and the anonymous Privacy Policy. Do not delete a real account or change real competition scores during rehearsal. Have the controller explain the email-based rights process and why SMTP acceptance is not inbox delivery. Finish by pointing to the passing CI and the owner-only, rolled-back database privacy test.
+
+Prepare screenshots as a network-failure fallback. The team must practise aloud and confirm understanding; this document does not mark that rehearsal complete. See [final check](final-check-2026-11-23.md) for remaining legal, delivery and accessibility limits. Do not submit to Moodle through the coding assistant.
