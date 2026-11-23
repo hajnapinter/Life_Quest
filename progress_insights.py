@@ -84,10 +84,19 @@ def insight_messages(rows,language='en',today=None):
         label=tr(HABITS[best['focus']],language)
         if best['goal'] in LANGUAGE_NAMES:
             label+=' · '+tr(LANGUAGE_NAMES[best['goal']],language)
-        messages.append(tr(('{label}: {count} completed quests across {days} days this week — your most consistent track.',
-                            '{label}: {count} missões concluídas em {days} dias esta semana — o teu hábito mais consistente.',
-                            '{label} : {count} quêtes terminées sur {days} jours cette semaine — ton activité la plus régulière.',
-                            '{label}: {count} abgeschlossene Quests an {days} Tagen diese Woche — dein beständigster Bereich.'),language).format(label=label,count=best['count'],days=len(best['days'])))
+        count=best['count'];days=len(best['days'])
+        quest_word=tr(('completed quest','missão concluída','quête terminée','abgeschlossene Quest') if count==1 else
+                      ('completed quests','missões concluídas','quêtes terminées','abgeschlossene Quests'),language)
+        day_word=tr(('day','dia','jour','Tag') if days==1 else ('days','dias','jours','Tagen'),language)
+        messages.append(tr(('{label}: {count} {quests} across {days} {day_word} this week.',
+                            '{label}: {count} {quests} em {days} {day_word} esta semana.',
+                            '{label} : {count} {quests} sur {days} {day_word} cette semaine.',
+                            '{label}: {count} {quests} an {days} {day_word} diese Woche.'),language).format(label=label,count=count,quests=quest_word,days=days,day_word=day_word))
+        if days>=2:
+            messages[-1]+=' '+tr(('You came back on multiple days — keep this rhythm.',
+                                   'Voltaste em vários dias — mantém este ritmo.',
+                                   'Tu es revenu plusieurs jours — garde ce rythme.',
+                                   'Du bist an mehreren Tagen zurückgekommen — bleib bei diesem Rhythmus.'),language)
     if f['previous'] and f['count']>f['previous']:
         messages.append(tr(('You completed {count} quests, compared with {previous} by the same point last week.',
                             'Concluíste {count} missões, face a {previous} até ao mesmo dia da semana passada.',

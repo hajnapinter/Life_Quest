@@ -151,3 +151,9 @@ def test_ai_repeated_activity_uses_the_varied_fallback(monkeypatch):
     plan=slot_plan('Fitness',1,3,[])
     with pytest.raises(ai_quests.QuestGenerationError,match='repeated'):
         ai_quests.generate_slot_quests('fixture',[plan],[{'slot':1,'status':'completed','title':'Walk 4,000 steps today'}])
+
+
+def test_single_completion_feedback_uses_singular_words():
+    messages=insight_messages([row('2026-11-23')],'en',date(2026,11,23))
+    assert '1 completed quest across 1 day' in messages[0]
+    assert 'multiple days' not in messages[0]
