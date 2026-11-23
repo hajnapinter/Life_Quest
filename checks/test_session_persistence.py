@@ -40,3 +40,9 @@ def test_other_tab_logout_clears_the_server_session(monkeypatch):
     state=setup(monkeypatch,{'nonce':'logout','action':'logout'},access_token='access',refresh_token='saved',user={'id':'a'})
     assert session.sync_session(Mock(),'https://project.supabase.co')=='pending'
     assert state.access_token is None and state.user is None and state.clear_browser_session
+
+
+def test_restore_css_stays_inside_the_style_element():
+    from design import _CSS
+    assert _CSS.lstrip().startswith("<style>")
+    assert _CSS.index("<style>") < _CSS.index(".st-key-auth_restoring") < _CSS.index("</style>")
