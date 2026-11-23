@@ -867,8 +867,6 @@ if supabase_config() is None:
     st.stop()
 
 
-sync_session(api_request,supabase_config()[0])
-
 if st.session_state.access_token:
     expires_at = st.session_state.get("token_expires_at")
 
@@ -888,6 +886,9 @@ if st.session_state.access_token:
             "warning",
         )
 
+
+# Persist the rotated token after renewal, before rendering the authenticated app.
+sync_session(api_request,supabase_config()[0])
 
 if not st.session_state.access_token:
     render_auth()

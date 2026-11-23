@@ -201,8 +201,8 @@ def render_squads(api, state):
 
                     names=[m['name'] for m in squad['members'] if m['id'] in quest['confirmed']]
                     count=len(quest['confirmed'])
-                    st.caption(tx(f"{count}/2 confirmations needed",f"{count}/2 confirmações necessárias",
-                                  f"{count}/2 confirmations nécessaires",f"{count}/2 Bestätigungen benötigt"))
+                    st.caption(tx(f"{count} confirmations · minimum 2",f"{count} confirmações · mínimo 2",
+                                  f"{count} confirmations · minimum 2",f"{count} Bestätigungen · mindestens 2"))
                     if names:
                         st.text(tx("Confirmed: ","Confirmaram: ","Ont confirmé : ","Bestätigt: ")+', '.join(names))
 
