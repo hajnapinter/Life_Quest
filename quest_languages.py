@@ -43,6 +43,7 @@ TITLES = {
 
 # Static shared quests and score units use the exact database wording as their keys.
 SHARED = {
+'Weekly leaderboard reward': ('Prémio da classificação semanal','Prix du classement hebdomadaire','Preis der Wochenrangliste'),
 'Explore a new place together': ('Explorem um lugar novo juntos','Explorez un nouvel endroit ensemble','Entdeckt gemeinsam einen neuen Ort'),
 'Teach one another a new skill': ('Ensinem uma competência nova uns aos outros','Apprenez-vous une nouvelle compétence','Bringt einander eine neue Fähigkeit bei'),
 'Cook a recipe from a new cuisine together': ('Preparem juntos uma receita de uma cozinha nova','Cuisinez ensemble une recette d’une nouvelle cuisine','Kocht gemeinsam ein Rezept aus einer neuen Länderküche'),

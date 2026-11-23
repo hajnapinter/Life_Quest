@@ -1,0 +1,53 @@
+-- Manual live regression. All accounts, scores, rewards and settings are rolled back.
+begin;
+create temporary table qa_weekly(check_name text,passed boolean);
+do $$
+declare a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();c uuid:=gen_random_uuid();d uuid:=gen_random_uuid();
+ ids uuid[]; person uuid; pair uuid; fresh uuid; joined uuid; invite text; state jsonb; amount integer; first_points integer;
+ w date:=date_trunc('week',now() at time zone 'UTC')::date-7; key_text text:=repeat('qa-limited-worker-',3);
+begin
+ ids:=array[a,b,c,d];
+ foreach person in array ids loop
+  insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values(person,person::text||'@example.invalid',now(),'{}');
+  insert into public.profiles(id,display_name,selected_categories) values(person,'QA weekly',array['Fitness']) on conflict(id) do nothing;
+ end loop;
+ update public.leaderboard_seasons set starts_on=w;
+ perform public.social_award(a,'squad_quest',gen_random_uuid(),600000);
+ perform public.social_award(a,'squad_quest',gen_random_uuid(),400000);
+ perform public.social_award(b,'squad_quest',gen_random_uuid(),1000000);
+ perform public.social_award(c,'squad_quest',gen_random_uuid(),600000);
+ update public.social_rewards set awarded_at=w::timestamp at time zone 'UTC' where user_id=any(ids);
+ perform public.social_award(a,'squad_quest',gen_random_uuid(),100);
+ perform set_config('request.jwt.claim.sub',a::text,true);
+ state:=public.get_global_weekly_ranking();
+ insert into qa_weekly select 'all users including zero XP appear',count(*)=4 from jsonb_array_elements(state->'rows') x where (x->>'user_id')::uuid=any(ids);
+ insert into qa_weekly select 'weekly reset and prize XP exclusion',(x->>'points')::integer=100 from jsonb_array_elements(state->'rows') x where x->>'user_id'=a::text;
+ insert into qa_weekly select 'tie decided by more quests',points=100 and place=1 from public.leaderboard_prizes where week_start=w and user_id=a;
+ insert into qa_weekly select 'second prize exact',points=50 and place=2 from public.leaderboard_prizes where week_start=w and user_id=b;
+ insert into qa_weekly select 'third prize exact',points=25 and place=3 from public.leaderboard_prizes where week_start=w and user_id=c;
+ insert into qa_weekly select 'zero XP no prize',not exists(select 1 from public.leaderboard_prizes where user_id=d);
+ select points into first_points from public.profiles where id=a;
+ perform public.get_global_weekly_ranking();
+ insert into qa_weekly select 'prizes idempotent',points=first_points from public.profiles where id=a;
+ insert into qa_weekly select 'recap includes bonus without quest count',exists(select 1 from jsonb_array_elements(public.get_activity_history()) x where x->>'source'='leaderboard_week' and x->>'counts_as_quest'='false');
+ pair:=public.create_friend_duel(null);select code into invite from public.friend_duels where id=pair;
+ begin perform public.join_friend_duel(invite); raise exception 'self accepted'; exception when others then if sqlerrm='self accepted' then raise; end if;end;
+ insert into qa_weekly values('self invite rejected',true);
+ perform set_config('request.jwt.claim.sub',b::text,true); joined:=public.join_friend_duel(' '||lower(invite)||' ');
+ insert into qa_weekly values('pasted code accepts correct 1v1',joined=pair);
+ perform set_config('request.jwt.claim.sub',c::text,true);
+ begin perform public.join_friend_duel(invite); raise exception 'outsider accepted'; exception when others then if sqlerrm='outsider accepted' then raise;end if;end;
+ insert into qa_weekly values('wrong recipient rejected',true);
+ update public.friend_duels set status='cancelled',closed_at=now() where id=pair;
+ perform set_config('request.jwt.claim.sub',a::text,true);fresh:=public.create_friend_duel(null);select code into invite from public.friend_duels where id=fresh;
+ perform set_config('request.jwt.claim.sub',b::text,true);joined:=public.join_friend_duel(invite);
+ insert into qa_weekly select 'new invite reopens existing pair',joined=pair and status='active' and closed_at is null from public.friend_duels where id=pair;
+ insert into qa_weekly values('anonymous ranking denied',not has_function_privilege('anon','public.get_global_weekly_ranking()','execute'));
+ insert into qa_weekly values('direct prize and award permissions denied',not has_table_privilege('authenticated','public.leaderboard_prizes','insert') and not has_function_privilege('authenticated','public.settle_weekly_leaderboard()','execute'));
+ insert into public.reminder_worker_keys(key_hash) values(encode(sha256(convert_to(key_text,'UTF8')),'hex'));
+ perform public.settle_due_competitions(key_text);
+ insert into qa_weekly select 'scheduled worker awards remain idempotent',points=first_points from public.profiles where id=a;
+ if exists(select 1 from qa_weekly where not passed or passed is null) then raise exception 'Weekly QA assertion failed';end if;
+end $$;
+select * from qa_weekly;
+rollback;

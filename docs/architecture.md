@@ -133,7 +133,7 @@ Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs checks/*.test.cj
 - API errors are converted to user-friendly messages without exposing raw database details.
 - `tests/test_token_refresh.py` covers token rotation and refresh failures.
 - `tests/test_api_errors.py` covers malformed responses and safe error messages.
-- The latest local Python test run passed 204 tests (23 November 2026).
+- The latest local Python test run passed 221 tests (23 November 2026).
 
 ### Security verification still required
 
@@ -169,3 +169,13 @@ Five navigation destinations remain visible: Home, Recap, Squad, Competition and
 `progress_insights` uses UTC completion dates, excluding active/skipped/future rows and weekly XP bonuses. Its most consistent track is selected by distinct active days, then completions; language tracks are separated by saved target language. Comparisons stop at the same weekday in each week.
 
 `invitations` validates hexadecimal squad/competition codes and builds links only from a validated configured app URL. Pending invitations survive email login and the Google PKCE browser handoff. They remain inert until an authenticated explicit acceptance calls the existing join RPC; the database continues to enforce membership, recipient and closed-invitation rules. Copying uses Streamlit's native copy control. `checks/` covers these journeys, factual calculations, all local variants and the OAuth handoff.
+
+## Multiplayer and weekly ranking revision (23 November)
+
+`supabase/weekly-leaderboard.sql` is applied after `reminders.sql` and `product-fixes.sql`. It preserves the legacy ranking API and adds authenticated `get_global_weekly_ranking`. The response exposes only nickname, validated avatar data, stable user ID and current weekly activity XP. Every profile appears, including zero-XP accounts. Prize eligibility requires positive weekly XP.
+
+Weeks are Monday–Sunday UTC. The existing hourly restricted worker settles all social results before ranking the closed week. Winners receive 100/50/25 lifetime XP exactly once through private prize/event records. Ties use quest count, then earlier last XP event, then stable ID. Prize XP is excluded from later weekly rankings. Duel day/week XP belongs to the completed activity week even when settled after midnight. Season activation prevents retroactive prizes for weeks before installation. Week settlement also runs when the leaderboard is opened, so a delayed scheduler can catch up. No client can choose recipients or amounts.
+
+`duel_progress` shows confirmed pair XP and provisional current scores separately. `invitations.normalize_invite_code` identifies the code's actual type, including a pasted link, so a 12-character competition code works from the Squad form too. The join RPC rejects own, closed and wrong-recipient invitations and reuses a previous pair when appropriate.
+
+`habit_journey` supplies broad, translated habit names and first/latest/next target summaries. Long-term milestones are the existing progression ceilings, not a new difficulty policy. AI reflections send only selected activity evidence to the verified zero-cost Requesty model, reject unsupported numeric claims, and use a clearly labeled local fallback when unavailable. Settings keeps saved preferences but omits the city and personalization editors.

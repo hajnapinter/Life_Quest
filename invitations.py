@@ -103,3 +103,43 @@ def render_invitation(api=None):
                     st.rerun()
         if st.button(tr(('Dismiss invitation','Ignorar convite','Fermer l’invitation','Einladung schließen'),language),key='dismiss_link_invitation'):
             clear_invitation();st.rerun()
+
+
+def normalize_invite_code(value):
+    """Accept a pasted link or either invite-code type in either social form."""
+    from urllib.parse import urlsplit,parse_qs
+    if not isinstance(value,str):
+        return None
+    text=value.strip()
+    if '://' in text:
+        try:
+            query=parse_qs(urlsplit(text).query)
+            text=query.get('invite',[''])[0]
+        except ValueError:
+            return None
+    code=re.sub(r'[\s-]+','',text).upper()
+    kind='squad' if len(code)==8 else 'competition' if len(code)==12 else None
+    return valid_invitation({'kind':kind,'code':code})
+
+
+def accept_invite_code(api,value):
+    language=st.session_state.get('language','en')
+    invitation=normalize_invite_code(value)
+    if not invitation:
+        st.error(tr(('Enter an 8-character Squad code or a 12-character 1v1 code, or paste an invitation link.',
+                     'Introduz um código de equipa de 8 caracteres ou 1v1 de 12, ou cola um link de convite.',
+                     'Saisis un code équipe de 8 caractères ou 1 contre 1 de 12, ou colle un lien d’invitation.',
+                     'Gib einen 8-stelligen Teamcode oder 12-stelligen 1-gegen-1-Code ein oder füge einen Einladungslink ein.'),language))
+        return
+    squad=invitation['kind']=='squad'
+    _,error=api('POST','/rest/v1/rpc/'+('join_squad' if squad else 'join_friend_duel'),
+                {'invite_code_input':invitation['code']} if squad else {'invite':invitation['code']},st.session_state.access_token)
+    if error:
+        st.error(tr(('This invitation is invalid, closed, yours, or intended for another friend. Ask for a fresh invitation.',
+                     'Este convite é inválido, está fechado, é teu ou destina-se a outro amigo. Pede um novo convite.',
+                     'Cette invitation est invalide, fermée, la tienne ou destinée à quelqu’un d’autre. Demande un nouveau lien.',
+                     'Diese Einladung ist ungültig, geschlossen, von dir oder für jemand anderen. Bitte um eine neue Einladung.'),language))
+    else:
+        st.session_state.social_navigation='👥 Squad' if squad else '⚔️ Competition'
+        st.session_state.social_notice=tr(('Invitation accepted.','Convite aceite.','Invitation acceptée.','Einladung angenommen.'),language)
+        st.rerun()

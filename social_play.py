@@ -1,9 +1,10 @@
 """Shared squad missions and pair-specific daily competitions."""
 from quest_display import quest_text, quest_texts
-from invitations import render_share
+from invitations import render_share, accept_invite_code
 import streamlit as st
 from ai_quest_ui import render_quest_styles
-from design import hero, member_chips, squad_ranking
+from design import hero, member_chips, squad_ranking, participation_matrix, duel_scoreboard
+from duel_progress import standings
 from auth_helpers import friendly_error, plain_markdown
 def tx(en, pt, fr, de):
     language = st.session_state.get("language", "en")
@@ -145,7 +146,11 @@ def render_squads(api, state):
 
                 st.subheader(plain_markdown(squad['name']))
                 member_chips([m['name'] for m in squad['members']])
-                render_squad_ranking(api, squad)
+                participation_matrix(squad,quest_texts([q['title'] for q in squad['quests']]),
+                    tx('Who took part','Quem participou','Qui a participé','Wer mitgemacht hat'),
+                    tx('Member','Membro','Membre','Mitglied'),
+                    tx('Confirmed','Confirmado','Confirmé','Bestätigt'),
+                    tx('Not confirmed','Não confirmado','Non confirmé','Nicht bestätigt'))
                 with st.expander(tx("Manage squad", "Gerir equipa", "Gérer l'équipe", "Team verwalten")):
                     st.caption(tx("You keep your XP and history. Use the invite code to rejoin.",
                                   "Manténs o XP e o histórico. Usa o código para voltar a entrar.",
@@ -231,6 +236,8 @@ def render_squads(api, state):
                 ))
 
     with right:
+            if squads:
+                render_squad_ranking(api,squad)
             with st.expander(
                 tx("Start another squad", "Criar outra equipa", "Créer une autre équipe", "Weiteres Team erstellen")
                 if squads else
@@ -288,84 +295,15 @@ def render_squads(api, state):
                             "Gib den Einladungscode ein, den dein Freund geteilt hat."
                         ))
                     else:
-                        act(api, 'join_squad', {'invite_code_input': code.strip().upper()}, tx(
-                            "You joined the squad.",
-                            "Entraste na equipa.",
-                            "Tu as rejoint l'équipe.",
-                            "Du bist dem Team beigetreten."
-                        ))
+                        accept_invite_code(api,code)
 
 
 def render_competitions(api,state):
     uid=st.session_state.user['id']
 
-    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
-                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
-    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
-                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
-                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
-                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
-    with st.expander(tx('Scoring & deadlines','Pontuação e prazos','Points et délais','Punkte und Fristen')):
-        st.caption(tx('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.',
-                      'Os resultados são declarados por cada um e podem ser editados até ao fim do dia, UTC. As semanas vão de segunda a domingo.',
-                      'Les résultats sont déclarés par chacun et modifiables jusqu\'à la fin de la journée, UTC. Les semaines vont du lundi au dimanche.',
-                      'Ergebnisse werden selbst eingetragen und können bis Tagesende (UTC) geändert werden. Wochen laufen von Montag bis Sonntag.'))
-        st.caption(tx('Daily XP: winner 35, other submitting player 15, tied players 25 each. Weekly bonus: winner 50, participating players in a tied week 20 each. Missing entries earn no daily XP.',
-                      'XP diário: vencedor 35, outro jogador que submeteu 15, empate 25 cada. Bónus semanal: vencedor 50, em semana empatada 20 para cada participante. Sem registo não há XP diário.',
-                      'XP quotidiens : gagnant 35, autre joueur ayant participé 15, égalité 25 chacun. Bonus hebdomadaire : gagnant 50, semaine à égalité 20 par participant. Sans résultat, pas d\'XP quotidiens.',
-                      'Tages-XP: Sieger 35, anderer Teilnehmer 15, Gleichstand je 25. Wochenbonus: Sieger 50, bei Gleichstand je 20 pro Teilnehmer. Ohne Eintrag gibt es keine Tages-XP.'))
-        st.caption(tx('Closed days and weeks settle when either player opens this page. Previous results stay in your history.',
-                      'Os dias e semanas fechados são calculados quando um dos jogadores abre esta página. Os resultados anteriores ficam no teu histórico.',
-                      'Les jours et semaines terminés sont calculés dès qu\'un des joueurs ouvre cette page. Les résultats précédents restent dans ton historique.',
-                      'Abgeschlossene Tage und Wochen werden ausgewertet, sobald einer der Spieler diese Seite öffnet. Frühere Ergebnisse bleiben in deinem Verlauf.'))
-    with st.expander(tx('Challenge a friend','Desafiar um amigo','Défier un ami','Freund herausfordern'),expanded=not state['duels']):
-
-        friends={f['id']:f['name'] for f in state['friends']}
-        if friends:
-            with st.form('challenge_squadmates'):
-                selected=st.multiselect(tx('Choose friends from your squads','Escolhe amigos das tuas equipas',
-                                           'Choisis des amis de tes équipes','Wähle Freunde aus deinen Teams'),
-                                        list(friends),format_func=lambda k:friends[k])
-                invite=st.form_submit_button(tx('Invite selected friends','Convidar amigos selecionados',
-                                                'Inviter les amis choisis','Ausgewählte Freunde einladen'))
-            if invite:
-                errors=[]
-                for friend in selected:
-                    _,error=rpc(api,'create_friend_duel',{'friend_id':friend})
-                    if error:errors.append(error)
-                errors=[friendly_error(e) for e in errors]
-                if errors:st.error(tx('Some invitations could not be created: ','Não foi possível criar alguns convites: ',
-                                      'Certaines invitations n\'ont pas pu être créées : ','Einige Einladungen konnten nicht erstellt werden: ')+'; '.join(errors))
-                elif selected:
-                    st.session_state.social_notice=tx('Invitations created. Each friend can accept in their 1v1 page.',
-                                                      'Convites criados. Cada amigo pode aceitar na sua página 1v1.',
-                                                      'Invitations créées. Chaque ami peut accepter sur sa page 1 contre 1.',
-                                                      'Einladungen erstellt. Jeder Freund kann sie auf seiner 1-gegen-1-Seite annehmen.')
-                    st.rerun()
-
-                else:st.info(tx('Select at least one friend.','Seleciona pelo menos um amigo.','Sélectionne au moins un ami.','Wähle mindestens einen Freund aus.'))
-        st.write(tx('For a friend outside your squad, create an invitation and share its code yourself.',
-                    'Para um amigo fora da tua equipa, cria um convite e partilha o código.',
-                    'Pour un ami hors de ton équipe, crée une invitation et partage son code.',
-                    'Für Freunde außerhalb deines Teams: Erstelle eine Einladung und teile den Code selbst.'))
-        if st.button(tx('Create a 1v1 invite code','Criar código de convite 1v1','Créer un code d\'invitation 1 contre 1','1-gegen-1-Einladungscode erstellen')):
-            act(api,'create_friend_duel',{'friend_id':None},tx('Invitation created. Share its code below.','Convite criado. Partilha o código abaixo.',
-                                                                'Invitation créée. Partage son code ci-dessous.','Einladung erstellt. Teile den Code unten.'))
-    with st.expander(tx('Accept a 1v1 invite code','Aceitar um código de convite 1v1','Accepter un code d\'invitation 1 contre 1','1-gegen-1-Einladungscode annehmen')):
-        with st.form('accept_duel'):
-            code=st.text_input(tx('Competition invite code','Código de convite da competição','Code d\'invitation du défi','Einladungscode des Wettbewerbs'),max_chars=20)
-            join=st.form_submit_button(tx('Accept challenge','Aceitar desafio','Accepter le défi','Herausforderung annehmen'),type='primary')
-        if join:
-            if not code.strip():st.error(tx('Enter the invite code.','Introduz o código de convite.','Saisis le code d\'invitation.','Gib den Einladungscode ein.'))
-            else:act(api,'join_friend_duel',{'invite':code.strip().upper()},tx('Your competition is live.','A tua competição começou.','Ton défi a commencé.','Dein Wettbewerb läuft.'))
-    if st.button(tx('Refresh results','Atualizar resultados','Actualiser les résultats','Ergebnisse aktualisieren'),key='social_refresh'):st.rerun()
-    if not state['duels']:st.info(tx('Your competitions will appear here once you invite a friend.',
-                                     'As tuas competições aparecem aqui quando convidares um amigo.',
-                                     'Tes défis apparaîtront ici dès que tu auras invité un ami.',
-                                     'Deine Wettbewerbe erscheinen hier, sobald du einen Freund einlädst.'))
     not_submitted=tx('not submitted','não submetido','non envoyé','nicht eingetragen')
     you_won=tx('You won','Ganhaste','Tu as gagné','Du hast gewonnen')
-    for pair in state['duels']:
+    for pair in sorted(state['duels'],key=lambda p:0 if p['status']=='active' else 1 if p['status']=='pending' else 2):
         mine=pair['creator']==uid
         friend_id=pair['opponent'] if mine else pair['creator']
         friend_raw=(pair.get('opponent_name') if mine else pair.get('creator_name')) or tx('a friend','um amigo','un ami','ein Freund')
@@ -404,13 +342,17 @@ def render_competitions(api,state):
                            'Termina após o prazo de hoje. Os resultados de hoje continuam a contar.',
                            "Se termine après l'échéance du jour. Les résultats du jour comptent encore.",
                            'Endet nach der heutigen Frist. Die heutigen Ergebnisse zählen noch.'))
-            elif st.button(tx('End competition','Terminar competição','Terminer le défi','Wettbewerb beenden'),key='end_'+pair['id']):
-                act(api,'close_friend_duel',{'pair_id':pair['id'],'action':'end'},
-                    tx("Competition will end after today.","A competição termina após hoje.","Le défi se termine après aujourd'hui.","Der Wettbewerb endet nach heute."))
             days=pair['days']
             current=next((d for d in days if d['day']==state['today']),None)
             week_days=[d for d in days if d['day']>=state['week_start'] and d['settled']]
 
+            duel_scoreboard(standings(pair,state,uid,st.session_state.profile.get('display_name','You')),
+                tx('This week, head to head','Esta semana, frente a frente','Cette semaine, face à face','Diese Woche im Duell'),
+                tx('Today’s result','Resultado de hoje','Résultat du jour','Heutiges Ergebnis'),
+                tx('Confirmed weekly XP. Today’s result is provisional until 23:59 UTC.',
+                   'XP semanal confirmado. O resultado de hoje é provisório até às 23:59 UTC.',
+                   'XP hebdomadaires confirmés. Le résultat du jour est provisoire jusqu’à 23 h 59 UTC.',
+                   'Bestätigte Wochen-XP. Das heutige Ergebnis ist bis 23:59 UTC vorläufig.'))
             a,b=st.container(key='stat_row_duel_'+str(pair['id'])).columns(2)
             a.metric(tx('Your wins this week','As tuas vitórias esta semana','Tes victoires cette semaine','Deine Siege diese Woche'),
                      sum(d['winner']==uid for d in week_days))
@@ -453,3 +395,73 @@ def render_competitions(api,state):
                              else you_won if d['winner']==uid else won(friend_raw))
                     table.append(dict(zip(columns,[d['day'],quest_text(d['title']),quest_text(d['unit']),str(scores.get(uid,'—')),str(scores.get(friend_id,'—')),outcome])))
                 st.dataframe(table,hide_index=True,width='stretch')
+            if not closed and not pair.get('closed_at'):
+                with st.expander(tx('Manage competition','Gerir competição','Gérer le défi','Wettbewerb verwalten')):
+                    if st.button(tx('End competition','Terminar competição','Terminer le défi','Wettbewerb beenden'),key='end_'+pair['id']):
+                        act(api,'close_friend_duel',{'pair_id':pair['id'],'action':'end'},
+                            tx("Competition will end after today.","A competição termina após hoje.","Le défi se termine après aujourd'hui.","Der Wettbewerb endet nach heute."))
+
+    st.subheader(tx('A daily challenge. A weekly winner.','Um desafio diário. Um vencedor semanal.',
+                    'Un défi quotidien. Un gagnant chaque semaine.','Eine tägliche Challenge. Ein Wochensieger.'))
+    st.write(tx('One shared daily quest per friend. Add your result by 23:59 UTC.',
+                'Uma missão diária partilhada por amigo. Regista o teu resultado até às 23:59 UTC.',
+                'Une quête quotidienne commune par ami. Ajoute ton résultat avant 23 h 59 UTC.',
+                'Eine gemeinsame Tagesquest pro Freund. Trage dein Ergebnis bis 23:59 UTC ein.'))
+    with st.expander(tx('Scoring & deadlines','Pontuação e prazos','Points et délais','Punkte und Fristen')):
+        st.write(tx('Results are self-reported and editable until the end of the day, UTC. Weeks run Monday–Sunday.',
+                      'Os resultados são declarados por cada um e podem ser editados até ao fim do dia, UTC. As semanas vão de segunda a domingo.',
+                      'Les résultats sont déclarés par chacun et modifiables jusqu\'à la fin de la journée, UTC. Les semaines vont du lundi au dimanche.',
+                      'Ergebnisse werden selbst eingetragen und können bis Tagesende (UTC) geändert werden. Wochen laufen von Montag bis Sonntag.'))
+        st.write(tx('Daily XP: winner 35, other submitting player 15, tied players 25 each. Weekly bonus: winner 50, participating players in a tied week 20 each. Missing entries earn no daily XP.',
+                      'XP diário: vencedor 35, outro jogador que submeteu 15, empate 25 cada. Bónus semanal: vencedor 50, em semana empatada 20 para cada participante. Sem registo não há XP diário.',
+                      'XP quotidiens : gagnant 35, autre joueur ayant participé 15, égalité 25 chacun. Bonus hebdomadaire : gagnant 50, semaine à égalité 20 par participant. Sans résultat, pas d\'XP quotidiens.',
+                      'Tages-XP: Sieger 35, anderer Teilnehmer 15, Gleichstand je 25. Wochenbonus: Sieger 50, bei Gleichstand je 20 pro Teilnehmer. Ohne Eintrag gibt es keine Tages-XP.'))
+        st.write(tx('Closed days and weeks settle when either player opens this page. Previous results stay in your history.',
+                      'Os dias e semanas fechados são calculados quando um dos jogadores abre esta página. Os resultados anteriores ficam no teu histórico.',
+                      'Les jours et semaines terminés sont calculés dès qu\'un des joueurs ouvre cette page. Les résultats précédents restent dans ton historique.',
+                      'Abgeschlossene Tage und Wochen werden ausgewertet, sobald einer der Spieler diese Seite öffnet. Frühere Ergebnisse bleiben in deinem Verlauf.'))
+    with st.expander(tx('Challenge a friend','Desafiar um amigo','Défier un ami','Freund herausfordern'),expanded=not state['duels']):
+
+        friends={f['id']:f['name'] for f in state['friends']}
+        if friends:
+            with st.form('challenge_squadmates'):
+                selected=st.multiselect(tx('Choose friends from your squads','Escolhe amigos das tuas equipas',
+                                           'Choisis des amis de tes équipes','Wähle Freunde aus deinen Teams'),
+                                        list(friends),format_func=lambda k:friends[k])
+                invite=st.form_submit_button(tx('Invite selected friends','Convidar amigos selecionados',
+                                                'Inviter les amis choisis','Ausgewählte Freunde einladen'))
+            if invite:
+                errors=[]
+                for friend in selected:
+                    _,error=rpc(api,'create_friend_duel',{'friend_id':friend})
+                    if error:errors.append(error)
+                errors=[friendly_error(e) for e in errors]
+                if errors:st.error(tx('Some invitations could not be created: ','Não foi possível criar alguns convites: ',
+                                      'Certaines invitations n\'ont pas pu être créées : ','Einige Einladungen konnten nicht erstellt werden: ')+'; '.join(errors))
+                elif selected:
+                    st.session_state.social_notice=tx('Invitations created. Each friend can accept in their 1v1 page.',
+                                                      'Convites criados. Cada amigo pode aceitar na sua página 1v1.',
+                                                      'Invitations créées. Chaque ami peut accepter sur sa page 1 contre 1.',
+                                                      'Einladungen erstellt. Jeder Freund kann sie auf seiner 1-gegen-1-Seite annehmen.')
+                    st.rerun()
+
+                else:st.info(tx('Select at least one friend.','Seleciona pelo menos um amigo.','Sélectionne au moins un ami.','Wähle mindestens einen Freund aus.'))
+        st.write(tx('For a friend outside your squad, create an invitation and share its code yourself.',
+                    'Para um amigo fora da tua equipa, cria um convite e partilha o código.',
+                    'Pour un ami hors de ton équipe, crée une invitation et partage son code.',
+                    'Für Freunde außerhalb deines Teams: Erstelle eine Einladung und teile den Code selbst.'))
+        if st.button(tx('Create a 1v1 invite code','Criar código de convite 1v1','Créer un code d\'invitation 1 contre 1','1-gegen-1-Einladungscode erstellen')):
+            act(api,'create_friend_duel',{'friend_id':None},tx('Invitation created. Share its code below.','Convite criado. Partilha o código abaixo.',
+                                                                'Invitation créée. Partage son code ci-dessous.','Einladung erstellt. Teile den Code unten.'))
+    with st.expander(tx('Accept a 1v1 invite code','Aceitar um código de convite 1v1','Accepter un code d\'invitation 1 contre 1','1-gegen-1-Einladungscode annehmen')):
+        with st.form('accept_duel'):
+            code=st.text_input(tx('Competition invite code','Código de convite da competição','Code d\'invitation du défi','Einladungscode des Wettbewerbs'),max_chars=500)
+            join=st.form_submit_button(tx('Accept challenge','Aceitar desafio','Accepter le défi','Herausforderung annehmen'),type='primary')
+        if join:
+            if not code.strip():st.error(tx('Enter the invite code.','Introduz o código de convite.','Saisis le code d\'invitation.','Gib den Einladungscode ein.'))
+            else:accept_invite_code(api,code)
+    if st.button(tx('Refresh results','Atualizar resultados','Actualiser les résultats','Ergebnisse aktualisieren'),key='social_refresh'):st.rerun()
+    if not state['duels']:st.info(tx('Your competitions will appear here once you invite a friend.',
+                                     'As tuas competições aparecem aqui quando convidares um amigo.',
+                                     'Tes défis apparaîtront ici dès que tu auras invité un ami.',
+                                     'Deine Wettbewerbe erscheinen hier, sobald du einen Freund einlädst.'))

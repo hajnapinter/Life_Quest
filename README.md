@@ -189,3 +189,11 @@ New quests rotate through 84 locally translated practical activity variants (35 
 Recap and pillar pages explain recorded progress: the most consistent track by active days, completed quests versus the same weekday last week, and the number of life areas explored. These are summaries of self-reported completions, not claims of real-world outcomes.
 
 Squad and pending Competition invitations now include a copyable link. After login/onboarding the recipient explicitly accepts or dismisses it. The Google PKCE handoff carries the pending invitation across tabs, without putting login tokens in links. Regression checks for these workflows live in `checks/` alongside the unchanged original `tests/` suite.
+
+## Weekly competition and habit journeys
+
+The six navigation destinations have plain centered labels. Competition places active results and a live two-player ranking above rules/invitations. Either social invite field recognizes Squad/1v1 codes and invitation links. Squad shows member-by-quest participation, with its ranking in the desktop right column.
+
+Leaderboard includes every account and refreshes every 30 seconds. At the end of each UTC week, positive-XP participants in the top three receive 100/50/25 XP once. Ties and prize exclusion rules are explained on the page. SQL: `supabase/weekly-leaderboard.sql` (apply last). First eligible prize week starts on installation, with no retroactive prizes.
+
+Habit expanders have broad names, recorded starting/latest targets, the next task, purpose and long-term direction. The progress card uses the verified free AI model for a motivational reflection grounded in recorded activities, with a labeled local fallback. Settings omits city and personalization editing while keeping saved onboarding answers.

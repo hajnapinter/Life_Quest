@@ -68,7 +68,7 @@ A new pillar must get an entry here; otherwise it falls back to peach.
 | Main navigation | Squad and ⚔️ Competition are separate pages; Squad contains shared quests and its ranking, Competition contains daily 1v1 challenges. Use the `st.radio` inside `st.container(key="bottom_navigation")`; a white pill floating at the bottom on phones, sticky at the top on desktop; the selected item is Action orange |
 | Onboarding choice cards | widgets inside the `onboarding` keyed container get card styling automatically; multi-select options go in a 2-column grid of `st.container(key="pickcard_<name>")` cards (checkbox + caption, no dashes in labels) |
 | A white card around a group of widgets | `st.container(key="card_<name>")`; any key starting with `card_` gets the card style |
-| Weekly ranking | `squad_ranking(rows, me, title)` on the Squad page, for the selected squad only (compact rows, medals for the top 3, the user highlighted). There is no separate Leaderboard page. `leaderboard()` (big podium) is kept but unused. |
+| Weekly ranking | `squad_ranking(rows, me, title)` on the Squad page, for the selected squad only (compact rows, medals for the top 3, the user highlighted). The separate weekly Leaderboard page uses `leaderboard()` with profile avatars and a three-height podium. |
 | Profile header | `profile_card(name, line, photo, ring)`: avatar (photo or initials), name, one muted line |
 | People in a squad | `member_chips(names)` |
 | Logo + "Life Quest" label at the top of a screen | `brand()` (sprout logo `LOGO_SVG`; tilts on hover) |
@@ -93,7 +93,7 @@ Five quests are always kept ready per pillar. Users choose how many to **see** (
 ## Personalisation and navigation
 
 - All seven pillars and avatar rings are available to everyone. No subscription modes.
-- Five main navigation items: Home, Recap, Squad, Competition, Settings. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
+- Six main navigation items: Home, Recap, Squad, Competition, Settings, Leaderboard. Labels have no emoji, use dark text and are centered. On narrow phones use two rows of three items. Pillar pages open from Home and its pillar picker. Keep navigation within phone width, without horizontal scrolling.
 - `places.py` searches cities via Photon. City, country, target language and preferred session length personalise quests through `personalization.py`; numeric progression stays in `quest_plan.py`.
 - Clearly disclose that location and preferences are sent to Requesty for generation; never send names or email addresses.
 - Daily opt-in email reminders use the hourly worker. Device notifications remain a test only.
@@ -129,3 +129,11 @@ Run `uv run streamlit run app.py`, look at the screen at desktop and phone width
 - `quest_variety.py` provides 84 practical activity variants across the 35 tracks, each in en/pt/fr/de. It changes activity wording only; `slot_plan` owns the unchanged targets, difficulty and progression. Completed history keeps its context snapshot. Append variants instead of reordering them; their recorded indices are part of saved history.
 - `progress_insights.py` adds a short factual card to Recap and pillar pages. Use recorded completed quests, exclude XP-only bonuses, and compare only equivalent weekdays. Do not claim a habit is established or infer health/financial outcomes.
 - `invitations.py` shows a copyable invitation link using Streamlit's native code-block copy button, plus the original code in an expander. Links contain only invite type and code. Signing in never accepts an invitation automatically; the user must press Accept invitation. Failed, closed or wrong-recipient invitations get a neutral message.
+
+## Multiplayer and progress review
+
+- Competition shows active pair standings and today's score form before rules and invitation controls. Confirmed XP and provisional same-day scores are explicitly distinguished; refresh every 30 seconds.
+- Squad uses a member-by-quest participation matrix on the left; the member ranking sits in the right desktop column and stacks on phones. Names and status cells must have accessible labels; never rely only on color.
+- Habit expanders use broad names from `habit_journey.habit_name`; inside, show recorded first/latest completed targets separately from the next target, a long-term direction and the purpose. Do not change progression.
+- Progress reflections use the verified free Requesty model with bounded activity evidence and no identity/location. Failures use a clearly labeled local encouragement, never pretend AI succeeded.
+- Settings omits city editing and the personalization form; stored onboarding preferences remain in effect.

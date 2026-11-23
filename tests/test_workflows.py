@@ -245,7 +245,7 @@ def test_joining_with_a_wrong_code_shows_an_error(backend):
     at = go(log_in("ana@example.com"), "👥 Squad")
     field(at, "Squad invite code").input("NOPE99")
     button(at, "Join my friends").click().run()
-    assert any("not valid" in e.value for e in at.error)
+    assert any("8-character" in e.value for e in at.error)
     assert backend.squads == []
 
 
@@ -292,16 +292,13 @@ def test_old_subscription_metadata_does_not_render_subscription_ui(backend):
     assert not any('Subscribe to Pro' in b.label for b in at.button)   # the "You're on Pro" card
 
 
-def test_city_search_saves_the_chosen_city_once(backend):
-    user = ready_user(backend, "ana@example.com")
-    at = go(log_in("ana@example.com"), "⚙️ Settings")
-    field(at, "Your city").input("Lisb").run()
-    at.radio(key="settings_city_choice").set_value("Lisbon, Portugal").run()
-    assert backend.profiles[user["id"]]["location"] == "Lisbon, Portugal"
-    patches = [c for c in backend.calls if c == ("PATCH", "/rest/v1/profiles")]
-    at.run()
-    at.run()
-    assert [c for c in backend.calls if c == ("PATCH", "/rest/v1/profiles")] == patches   # no save loop
+def test_settings_omits_city_and_personalisation_controls(backend):
+    user=ready_user(backend,"ana@example.com")
+    before=dict(backend.profiles[user['id']])
+    at=go(log_in("ana@example.com"),"⚙️ Settings")
+    assert not any(t.label=="Your city" for t in at.text_input)
+    assert not any(h.value=="Make quests yours" for h in at.subheader)
+    assert backend.profiles[user['id']]==before
 
 
 def test_log_out_returns_to_the_login_screen(backend):

@@ -15,6 +15,7 @@ from account import photo as account_photo, ring as account_ring
 from personalization import clean_preferences, personalize_title
 from quest_variety import varied_plan, render_variant
 from progress_insights import render_insights
+from habit_journey import habit_name, journey_texts
 
 
 def ai_config():
@@ -261,6 +262,7 @@ def load_board(api, categories):
 CATEGORY_NAMES = {
     "Squad": {"pt": "Equipa", "fr": "Équipe", "de": "Team"},
     "Competition": {"pt": "Competição", "fr": "Compétition", "de": "Wettbewerb"},
+    "Leaderboard": {"pt":"Classificação","fr":"Classement","de":"Rangliste"},
     "Fitness": {"pt": "Exercício", "fr": "Sport", "de": "Fitness"},
     "Health": {"pt": "Saúde", "fr": "Santé", "de": "Gesundheit"},
     "Languages": {"pt": "Idiomas", "fr": "Langues", "de": "Sprachen"},
@@ -386,7 +388,9 @@ def render_pillar(api, category):
                     plan={**plan,**active}
                 current_title=display_titles([plan])[0]
                 completed=[q for q in own if q.get('slot')==slot and q['status']=='completed']
-                with st.expander(current_title):
+                with st.expander(habit_name(plan['focus'],language)):
+                    for journey_line in journey_texts(plan,own,language):
+                        st.text(journey_line)
                     step_label = {
                         "en": "Your current step",
                         "pt": "O teu passo atual",
@@ -511,7 +515,7 @@ def render_recap(api):
     render_insights(everything,language)
     if recap['completed']:
         st.subheader(_tx('By pillar','Por área','Par domaine','Nach Bereich'))
-        icons={'Squad':'👥','Competition':'⚔️'}
+        icons={'Squad':'👥','Competition':'⚔️','Leaderboard':'🏆'}
         pillar_bars([(cat,f'{icons.get(cat,PILLARS.get(cat,("•",))[0])} {category_name(cat)}',n) for cat,n in recap['per_pillar'].items()])
         day,count=recap['best_day']
         st.caption('🌟 '+_tx('Best day','Melhor dia','Meilleur jour','Bester Tag')+f': {WEEKDAYS.get(language,WEEKDAYS["en"])[day.weekday()]} · {count} '

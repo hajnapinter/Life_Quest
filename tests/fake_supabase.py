@@ -179,7 +179,7 @@ class FakeSupabase:
         name = (body.get("squad_name_input") or "").strip()
         if not 2 <= len(name) <= 50:
             self.error(400, "Squad name must be 2 to 50 characters", "P0001")
-        squad = {"id": self.new_id("squad"), "name": name, "invite_code": f"CODE{len(self.squads) + 1:04d}", "members": [uid]}
+        squad = {"id": self.new_id("squad"), "name": name, "invite_code": f"{len(self.squads) + 1:08X}", "members": [uid]}
         self.squads.append(squad)
         for title in ("Cook a new recipe together", "Visit a free museum day", "Go for a group walk"):
             self.squad_quests.append({"id": self.new_id("sq"), "squad_id": squad["id"], "title": title,

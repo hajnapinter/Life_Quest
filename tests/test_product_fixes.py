@@ -63,7 +63,7 @@ def test_country_changes_recipe_and_currency_without_changing_targets():
 def test_mobile_navigation_has_five_main_destinations(backend):
     ready_user(backend,'nav@example.com',categories=('Fitness','Languages','Health','Social'))
     at=log_in('nav@example.com')
-    assert len(at.radio(key='main_navigation').options)==5
+    assert len(at.radio(key='main_navigation').options)==6
     button(at,'💪 Fitness →').click().run()
     assert at.title[0].value=='💪 Fitness'
 

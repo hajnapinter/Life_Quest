@@ -115,13 +115,66 @@ def insight_messages(rows,language='en',today=None):
     return messages[:3]
 
 
+def progress_evidence(rows):
+    """Only activity evidence; no identity, contact details, photo or location."""
+    groups={}
+    for q in rows:
+        if q.get('focus') not in HABITS:
+            continue
+        key=(q.get('category'),q.get('slot'))
+        group=groups.setdefault(key,{'habit':tr(HABITS[q['focus']],'en'),'category':q.get('category'),'completed':[],'next_target':None})
+        if completion_day(q):
+            group['completed'].append(q)
+        elif q.get('status')=='active':
+            group['next_target']=q.get('target')
+    result=[]
+    for group in groups.values():
+        done=sorted(group.pop('completed'),key=lambda q:q.get('completed_at') or '')
+        if not done:
+            continue
+        group.update(first_completed_target=done[0].get('target'),latest_completed_target=done[-1].get('target'),
+                     recorded_completions=len(done),recent_activities=[q.get('title','')[:100] for q in done[-3:]])
+        result.append(group)
+    return {'tracks':sorted(result,key=lambda q:q['recorded_completions'],reverse=True)[:8]}
+
+
 def render_insights(rows,language):
+    import hashlib,json,time
     import streamlit as st
+    from ai_quests import generate_progress_message,QuestGenerationError
+    evidence=progress_evidence(rows)
+    message=None
+    fingerprint=hashlib.sha256(json.dumps([language,evidence],sort_keys=True).encode()).hexdigest()
+    cache=st.session_state.setdefault('progress_reflections',{})
+    if fingerprint in cache:
+        message=cache[fingerprint]
+    elif evidence['tracks'] and time.monotonic()>=st.session_state.get('progress_ai_retry',0):
+        # Per-session cooldown on failure; no paid alternative or repeated calls on each rerun.
+        from ai_quest_ui import ai_config
+        try:
+            message=generate_progress_message(ai_config(),evidence,language)
+            cache[fingerprint]=message
+            if len(cache)>20:
+                del cache[next(iter(cache))]
+        except QuestGenerationError:
+            st.session_state.progress_ai_retry=time.monotonic()+60
     with st.container(key='card_personal_insights'):
         st.subheader(tr(('Your progress, in words','O teu progresso em palavras','Tes progrès en mots','Dein Fortschritt in Worten'),language))
-        for message in insight_messages(rows,language):
+        if message:
             st.text(message)
-        st.caption(tr(('Based on quests you marked complete this week (UTC).',
-                       'Com base nas missões que marcaste como concluídas esta semana (UTC).',
-                       'D’après les quêtes que tu as cochées cette semaine (UTC).',
-                       'Basierend auf deinen als erledigt markierten Quests dieser Woche (UTC).'),language))
+            st.caption(tr(('AI reflection based on your recorded quests.','Reflexão de IA com base nas missões registadas.',
+                           'Bilan IA basé sur tes quêtes enregistrées.','KI-Rückblick auf Basis deiner erfassten Quests.'),language))
+        elif evidence['tracks']:
+            best=evidence['tracks'][0]
+            from habit_journey import habit_name
+            st.text(tr(('You are making room for {habit}. Keep the next step manageable and let these small actions become part of your routine.',
+                        'Estás a dar espaço a {habit}. Mantém o próximo passo acessível e integra estas pequenas ações na tua rotina.',
+                        'Tu fais de la place à {habit}. Garde la prochaine étape accessible et intègre ces petites actions à ta routine.',
+                        'Du schaffst Raum für {habit}. Halte den nächsten Schritt machbar und integriere diese kleinen Aktionen in deinen Alltag.'),language).format(habit=tr(next((v for v in HABITS.values() if v[0]==best['habit']),('your chosen habit','o teu hábito','ton habitude','deine Gewohnheit')),language)))
+            st.caption(tr(('AI reflection is temporarily unavailable. This encouragement comes from the local habit library.',
+                           'A reflexão de IA está indisponível. Este incentivo vem da biblioteca local.',
+                           'Le bilan IA est indisponible. Cet encouragement vient de la bibliothèque locale.',
+                           'Der KI-Rückblick ist nicht verfügbar. Diese Ermutigung stammt aus der lokalen Bibliothek.'),language))
+        else:
+            for text in insight_messages(rows,language):
+                st.text(text)

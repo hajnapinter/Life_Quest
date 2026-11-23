@@ -775,14 +775,11 @@ def render_settings() -> None:
             photo=account_photo(), ring=account_ring(),
         )
         render_photo_setting(api_request, lang)
-        render_city_setting(lang)
         st.caption(text["privacy"] + " " + text["ai_privacy"])
     with left, st.container(key="card_pillars"):
         render_pillars_setting(lang)
     with left, st.container(key="card_quests_shown"):
         render_quests_shown_setting(lang)
-    with right, st.container(key="card_personalization"):
-        render_preferences(api_request,lang)
     with right, st.container(key="card_notifications"):
         st.subheader(text["notifications"])
         render_reminder_settings(api_request)
@@ -799,6 +796,10 @@ def render_settings() -> None:
 def render_dashboard() -> None:
     """Display the main dashboard and page navigation."""
     profile = st.session_state.profile
+    destination=st.session_state.pop("social_navigation",None)
+    if destination:
+        st.session_state.current_page=destination
+        st.session_state.main_navigation=destination
     render_invitation(api_request)
     col_profile, col_language = st.columns([3, 1], vertical_alignment="center")
 
@@ -809,7 +810,7 @@ def render_dashboard() -> None:
         language_picker("header_language")
     categories = [c for c in profile.get("selected_categories", []) if c in PILLARS]
     pillar_pages = {f"{PILLARS[c][0]} {c}": c for c in categories}
-    pages = ["🏠 Home", "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings"]
+    pages = ["🏠 Home", "📊 Recap", "👥 Squad", "⚔️ Competition", "⚙️ Settings", "Leaderboard"]
     language = st.session_state.get("language", "en")
     if st.session_state.user.get('user_metadata',{}).get('lifequest_language')!=language:
         updated,error=api_request('PUT','/auth/v1/user',{'data':{'lifequest_language':language}},st.session_state.access_token)
@@ -817,10 +818,11 @@ def render_dashboard() -> None:
             st.session_state.user=updated
     labels = {
         "🏠 Home": t("home"),
-        "📊 Recap": "📊 " + t("recap"),
-        "👥 Squad": "👥 " + t("squad"),
-        "⚔️ Competition": "⚔️ " + t("competition"),
-        "⚙️ Settings": "⚙️ " + t("settings"),
+        "📊 Recap": t("recap"),
+        "👥 Squad": t("squad"),
+        "⚔️ Competition": t("competition"),
+        "⚙️ Settings": t("settings"),
+        "Leaderboard":t("leaderboard"),
     }
     labels.update({item: translate_pillar_label(item, language) for item in pillar_pages})
 
@@ -859,6 +861,9 @@ def render_dashboard() -> None:
         render_social(api_request, competition=True)
     elif page == "⚙️ Settings":
         render_settings()
+    elif page == "Leaderboard":
+        from weekly_leaderboard import render_weekly_leaderboard
+        render_weekly_leaderboard(api_request)
 
 initialise_state()
 capture_invitation()

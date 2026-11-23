@@ -80,22 +80,43 @@ div[class*="st-key-quest_row_"]:has(input:checked:not(:disabled)) {opacity:.4; t
 div[class*="st-key-quest_row_"] label {width:100%%; cursor:pointer;}
 div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weight:500; line-height:1.45;}
 
+
+.lq-team-matrix,.lq-duel-scoreboard {background:%(surface)s;border-radius:22px;padding:20px;margin:12px 0 22px;box-shadow:0 8px 22px -16px rgba(43,35,48,.45);}
+.lq-team-matrix table {width:100%%;border-collapse:collapse;font-size:14px;}
+.lq-team-matrix th,.lq-team-matrix td {padding:10px 5px;border-bottom:1px solid %(line)s;text-align:center;}
+.lq-team-matrix th:first-child {text-align:left;overflow-wrap:anywhere;}
+.lq-quest-legend {font-size:13px;margin-bottom:14px;color:%(ink)s;}
+.lq-participation {display:inline-flex;width:25px;height:25px;border-radius:7px;align-items:center;justify-content:center;}
+.lq-participation.yes {background:#CDEBD8;color:#245B38;font-weight:700;}.lq-participation.no {background:#F5F0EC;color:#655767;}
+.lq-duel-players {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.lq-duel-player {display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;background:#FFF2E4;border-radius:18px;padding:14px 6px;min-width:0;}
+.lq-duel-player strong {overflow-wrap:anywhere;}.lq-duel-player .medal {font-size:28px;}.lq-duel-player small {color:#44364B;}
+.lq-podium .p {min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+.lq-podium .p.first {min-height:230px;}.lq-podium .p:last-child:not(.first) {min-height:150px;}
+.st-key-competition_rules [data-testid="stCaptionContainer"] p {color:%(ink)s;}
+
+@media(max-width:480px) {
+ .st-key-bottom_navigation {border-radius:22px !important;}
+ .st-key-bottom_navigation [role="radiogroup"] {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+ .stMainBlockContainer {padding-bottom:140px !important;}
+}
 /* ---------- Floating bottom navigation ---------- */
 .st-key-bottom_navigation {
   position:fixed; z-index:1000; left:50%%; transform:translateX(-50%%);
   bottom:calc(14px + env(safe-area-inset-bottom, 0px));
   width:min(680px, calc(100%% - 24px)); background:%(surface)s; border-radius:999px;
   padding:6px; box-shadow:0 14px 34px -14px rgba(43,35,48,.45);}
-.st-key-bottom_navigation [role="radiogroup"] {display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px;
+.st-key-bottom_navigation [role="radiogroup"] {display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px;
   overflow:visible;}
 .st-key-bottom_navigation [role="radiogroup"]::-webkit-scrollbar {display:none;}
 .st-key-bottom_navigation [role="radiogroup"] label {white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
   color:%(muted)s; font-weight:500; transition:background .2s ease;}
-.st-key-bottom_navigation [role="radiogroup"] label p {font-size:11px; line-height:1.3; overflow-wrap:anywhere;}
+.st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; text-align:center;}
+.st-key-bottom_navigation [role="radiogroup"] label p {color:#1C1720; font-weight:600; text-align:center; font-size:11px; line-height:1.3; overflow-wrap:anywhere;}
 div[class*="st-key-pillar_link_"] button p {font-size:1.15rem; font-weight:600;}
 div[class*="st-key-pillar_link_"] button {padding-left:0;}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:%(action)s; color:#fff;}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) p {color:#fff;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) {background:#FFE3D1; color:%(ink)s; box-shadow:inset 0 -3px 0 %(action)s;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked) p {color:%(ink)s;}
 .st-key-bottom_navigation [data-testid="stRadioOption"] > div > div:first-child,
 .st-key-bottom_navigation label > div:first-child:not(:last-child) {display:none !important;}
 
@@ -287,7 +308,7 @@ div.stButton > button:hover, div.stFormSubmitButton > button:hover {transform:tr
 div.stButton > button:active, div.stFormSubmitButton > button:active {transform:scale(.97);}
 .st-key-bottom_navigation [role="radiogroup"] label {transition:background .2s ease, transform .2s ease, color .2s ease;}
 .st-key-bottom_navigation [role="radiogroup"] label:hover {background:#FFF1E6; transform:translateY(-1px);}
-.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked):hover {background:%(action)s;}
+.st-key-bottom_navigation [role="radiogroup"] label:has(input:checked):hover {background:#FFD5BC;}
 .lq-pillar .lq-ico {transition:transform .3s cubic-bezier(.2,1.4,.4,1);}
 .lq-pillar:hover .lq-ico {transform:rotate(-8deg) scale(1.1);}
 .lq-heat .grid i {transition:transform .15s ease;}
@@ -455,14 +476,14 @@ def member_chips(names: list[str]) -> None:
 def leaderboard(rows: list[dict], me: str, xp_label: str = "XP", quests_label: str = "quests") -> None:
     """Podium for the top three, then ranked rows. rows: name, points, quests (already sorted)."""
     def is_me(r):
-        return bool(me) and r["name"] == me
+        return r.get("is_me", bool(me) and r["name"] == me)
 
     top = rows[:3]
     order = [1, 0, 2] if len(top) == 3 else list(range(len(top)))  # 2nd, 1st, 3rd on the podium
     medals = ["🥇", "🥈", "🥉"]
     cards = "".join(
         f'<div class="p{" first" if i == 0 else ""}{" me" if is_me(top[i]) else ""}">'
-        f'<div class="medal">{medals[i]}</div><div class="who">{html.escape(top[i]["name"])}</div>'
+        f'<div class="medal">{medals[i]}</div>{avatar_html(top[i]["name"],top[i].get("photo"),size=48)}<div class="who">{html.escape(top[i]["name"])}</div>'
         f'<div class="pts">{int(top[i]["points"])} {html.escape(xp_label)}</div>'
         f'<small>{int(top[i]["quests"])} {html.escape(quests_label)}</small></div>'
         for i in order
@@ -528,3 +549,29 @@ def pillar_bars(items: list[tuple[str, str, int]]) -> None:
         for category, label, count in items
     )
     st.markdown(f'<div class="lq-bars">{rows}</div>', unsafe_allow_html=True)
+
+
+def participation_matrix(squad, titles, heading, member_label, confirmed_label, pending_label):
+    """Names down the rows, shared quests across columns; accessible status in each cell."""
+    quests=squad.get('quests',[])
+    legend=''.join(f'<div><b>Q{i+1}</b> · {html.escape(title)}</div>' for i,title in enumerate(titles))
+    headers=''.join(f'<th scope="col" title="{html.escape(title,quote=True)}">Q{i+1}</th>' for i,title in enumerate(titles))
+    rows=''
+    for member in squad.get('members',[]):
+        cells=''
+        for quest in quests:
+            done=member['id'] in quest.get('confirmed',[])
+            label=confirmed_label if done else pending_label
+            cells+=f'<td><span class="lq-participation {"yes" if done else "no"}" role="img" aria-label="{html.escape(label,quote=True)}" title="{html.escape(label,quote=True)}">{"✓" if done else "—"}</span></td>'
+        rows+=f'<tr><th scope="row">{html.escape(member["name"])}</th>{cells}</tr>'
+    st.markdown(f'<div class="lq-team-matrix"><h3>{html.escape(heading)}</h3><div class="lq-quest-legend">{legend}</div><table><thead><tr><th scope="col">{html.escape(member_label)}</th>{headers}</tr></thead><tbody>{rows}</tbody></table></div>',unsafe_allow_html=True)
+
+
+def duel_scoreboard(rows, title, result_label, xp_label):
+    cards=''
+    for row in rows:
+        medal='🥇' if row['place']==1 else '🥈'
+        cards+=(f'<div class="lq-duel-player"><span class="medal">{medal}</span>{avatar_html(row["name"],size=40)}'
+                f'<strong>{html.escape(row["name"])}</strong><span>{int(row["points"])} XP</span>'
+                f'<small>{html.escape(result_label)}: {html.escape(str(row["result"]))}</small></div>')
+    st.markdown(f'<div class="lq-duel-scoreboard"><h3>{html.escape(title)}</h3><div class="lq-duel-players">{cards}</div><p>{html.escape(xp_label)}</p></div>',unsafe_allow_html=True)
