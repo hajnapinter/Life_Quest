@@ -29,14 +29,6 @@ Brevo shows the earlier confirmation to the controller's university address as *
 
 A read-only Auth query confirmed that the university account exists and remains unconfirmed. A fresh confirmation resend was requested from the live app to the previously authorised university address. The neutral success response alone does not prove a new message was generated (confirmed accounts need no new signup confirmation). The refreshed Brevo view returned no log rows for the inspected period, so it did not supply fresh delivery evidence; do not claim a second delivery. Inbox receipt remains unproven; no sender allow-list, anti-phishing policy or institutional filter was weakened.
 
-Ready-to-send **manual** university IT request (not sent):
-
-> Please trace a Life Quest signup confirmation addressed to my university account. Brevo reports Delivered at 23 November 00:40 in its dashboard, but I cannot find it in Outlook or my user quarantine. Please check transport rules, administrator-only quarantine and final mailbox delivery. I can provide the exact envelope sender, Internet Message-ID and the SMTP delivery event privately from the Brevo log. Please do not disable anti-phishing or spam protection globally.
-
-Ready-to-send **manual** Requesty enquiry (not sent):
-
-> We operate Life Quest, a noncommercial student app. Please provide your DPA for review, the applicable subprocessor/inference regions and transfer safeguards, and explain free-plan content/training treatment separately from per-key logging. Our request logging is disabled. Please confirm whether organisation-wide zero data retention is available without enabling a paid plan. We do not authorise an upgrade or billing change. Controller contact: Hajna Pinter, 81324@novasbe.pt.
-
 ## Accessibility findings to resolve separately
 
 All six signed-in screens were measured at both 390px and 1280px: no horizontal page overflow, no app exception, no missing names among visible form fields, and no images missing an alt attribute. Navigation is keyboard-operable and uses two rows of three targets, each about 117×33px. This is not a full assistive-technology certification.
