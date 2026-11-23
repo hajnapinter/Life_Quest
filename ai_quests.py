@@ -79,7 +79,14 @@ changes wording and activity choice only: numeric progression and difficulty sta
         if choice.get('finish_reason')!='stop' or choice['message'].get('refusal'):
             raise ValueError('incomplete')
         result=json.loads(choice['message']['content'])
-        return validate_batch(result,plans)
+        validated=validate_batch(result,plans)
+        for quest in validated:
+            recent=[q for q in history if q.get('slot')==quest['slot'] and q.get('status') in ('completed','skipped')][-2:]
+            # Changing only a number is not a fresh activity. Retain the varied local fallback instead.
+            signature=lambda text:re.sub(r'\d+(?:[, .]\d{3})*','{n}',str(text).casefold()).strip(' .!')
+            if any(signature(q.get('title'))==signature(quest['title']) for q in recent):
+                raise QuestGenerationError('AI repeated a recent activity. Using a fresh library quest instead.')
+        return validated
     except HTTPError as error:
         if error.code==429:
             raise QuestGenerationError('The free AI limit was reached. Using practical suggestions instead.') from None

@@ -123,3 +123,9 @@ Streamlit normally dims the page while it reruns after a click. `design.py` turn
 ## Checking your work
 
 Run `uv run streamlit run app.py`, look at the screen at desktop and phone width, then run `uv run pytest` (see AGENTS.md).
+
+## Quest variety, progress feedback and invitations
+
+- `quest_variety.py` provides 84 practical activity variants across the 35 tracks, each in en/pt/fr/de. It changes activity wording only; `slot_plan` owns the unchanged targets, difficulty and progression. Completed history keeps its context snapshot. Append variants instead of reordering them; their recorded indices are part of saved history.
+- `progress_insights.py` adds a short factual card to Recap and pillar pages. Use recorded completed quests, exclude XP-only bonuses, and compare only equivalent weekdays. Do not claim a habit is established or infer health/financial outcomes.
+- `invitations.py` shows a copyable invitation link using Streamlit's native code-block copy button, plus the original code in an expander. Links contain only invite type and code. Signing in never accepts an invitation automatically; the user must press Accept invitation. Failed, closed or wrong-recipient invitations get a neutral message.

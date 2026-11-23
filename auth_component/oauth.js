@@ -24,7 +24,7 @@ async function exchange(code) {
     if (!response.ok || !session.access_token) throw new Error('exchange_failed');
     localStorage.removeItem(storageKey());
     // Tokens are sent through the component channel, never in a URL or localStorage.
-    result({access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, code});
+    result({access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, code, invitation:saved.invitation});
     status.textContent = 'Signed in. Loading your quests…';
   } catch (_) {
     localStorage.removeItem(storageKey());
@@ -42,7 +42,7 @@ button.addEventListener('click', async () => {
     popup.opener = null;
     const verifier = b64(crypto.getRandomValues(new Uint8Array(32)));
     const challenge = b64(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
-    localStorage.setItem(storageKey(), JSON.stringify({verifier, created: Date.now()}));
+    localStorage.setItem(storageKey(), JSON.stringify({verifier, created: Date.now(), invitation:args.invitation}));
     const url = new URL(args.supabase_url + '/auth/v1/authorize');
     url.search = new URLSearchParams({provider:'google', redirect_to:args.redirect_url,
       code_challenge:challenge, code_challenge_method:'s256', scopes:'email profile'});

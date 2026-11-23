@@ -1,5 +1,6 @@
 """Shared squad missions and pair-specific daily competitions."""
 from quest_display import quest_text, quest_texts
+from invitations import render_share
 import streamlit as st
 from ai_quest_ui import render_quest_styles
 from design import hero, member_chips, squad_ranking
@@ -150,7 +151,7 @@ def render_squads(api, state):
                                   "Manténs o XP e o histórico. Usa o código para voltar a entrar.",
                                   "Tu conserves tes XP et ton historique. Le code permet de revenir.",
                                   "XP und Verlauf bleiben erhalten. Mit dem Code kannst du wieder beitreten."))
-                    st.code(squad['invite_code'],language=None)
+                    render_share('squad',squad['invite_code'])
                     if st.button(tx("Leave squad", "Sair da equipa", "Quitter l'équipe", "Team verlassen"),key='leave_'+str(squad['id'])):
                         act(api,'leave_squad',{'squad_id_input':squad['id']},
                             tx("You left the squad.","Saíste da equipa.","Tu as quitté l'équipe.","Du hast das Team verlassen."))
@@ -158,12 +159,12 @@ def render_squads(api, state):
 
                 with st.expander(tx("Invite a friend", "Convidar um amigo", "Inviter un ami", "Freund einladen")):
                     st.write(tx(
-                        "Ask your friend to open Squad quests and enter this code:",
-                        "Pede ao teu amigo para abrir as missões de equipa e introduzir este código:",
-                        "Demande à ton ami d'ouvrir les quêtes d'équipe et de saisir ce code :",
-                        "Bitte deinen Freund, die Team-Quests zu öffnen und diesen Code einzugeben:"
+                        "Send the invitation link to your friend, or share the code:",
+                        "Envia o link de convite ao teu amigo ou partilha o código:",
+                        "Envoie le lien d’invitation à ton ami ou partage le code :",
+                        "Sende deinem Freund den Einladungslink oder teile den Code:"
                     ))
-                    st.code(squad['invite_code'], language=None)
+                    render_share('squad',squad['invite_code'])
 
                 st.caption(tx(
                     "Three shared quests each week. Do them together, then each participant confirms. At least two confirmations unlock 30 XP per participant.",
@@ -377,7 +378,7 @@ def render_competitions(api,state):
                 if mine:
                     st.write(tx('Waiting for your friend to accept.','À espera que o teu amigo aceite.',
                                 'En attente de l\'acceptation de ton ami.','Warte darauf, dass dein Freund annimmt.'))
-                    st.code(pair['code'],language=None)
+                    render_share('competition',pair['code'])
                 else:
                     st.write(tx(f"{friend_name} invited you to a daily competition.",
                                 f"{friend_name} convidou-te para uma competição diária.",

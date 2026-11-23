@@ -13,6 +13,8 @@ from quest_plan import slot_plan, pillar_statistics, TRACKS, clean_title, EXPERI
 from design import greeting, hero, pillar_header, heatmap, pillar_bars
 from account import photo as account_photo, ring as account_ring
 from personalization import clean_preferences, personalize_title
+from quest_variety import varied_plan, render_variant
+from progress_insights import render_insights
 
 
 def ai_config():
@@ -69,7 +71,7 @@ def build_batch(category, slots, rows, pending_id=None, allow_ai=True):
     plans=[slot_plan(category,slot,starting_level(category),history) for slot in slots]
     preferences=clean_preferences(st.session_state.user.get('user_metadata',{}).get('lifequest_preferences'))
     context={**preferences,'location':st.session_state.profile.get('location',''), 'level':starting_level(category)}
-    plans=[{**plan,'context':context} for plan in plans]
+    plans=[varied_plan(plan,history,context) for plan in plans]
     key=ai_config()
     attempts,lock=generation_guard()
     identity=(user_id,category,pending_id or tuple(slots))
@@ -197,17 +199,22 @@ def trend_html(direction, previous):
 
 
 def display_titles(quests):
-    titles=quest_texts([clean_title(q.get('title',''),q.get('target')) for q in quests])
     language=st.session_state.get('language','en')
     current=clean_preferences(st.session_state.user.get('user_metadata',{}).get('lifequest_preferences'))
-    result=[]
-    for title,quest in zip(titles,quests):
+    result=[None]*len(quests); translate=[]; positions=[]
+    for i,quest in enumerate(quests):
         context=quest.get('context') if isinstance(quest.get('context'),dict) else {}
-        if not context and quest.get('status')=='completed':
-            result.append(title)
-            continue
-        context=context or {**current,'location':st.session_state.profile.get('location',''),'level':starting_level(quest.get('category',''))}
-        result.append(personalize_title(title,quest,context,context.get('location',''),language,context.get('level',1)))
+        if context.get('variety_version')==1 and quest.get('source')=='curated':
+            result[i]=render_variant(quest,context,context.get('location',''),language)
+        else:
+            positions.append(i);translate.append(clean_title(quest.get('title',''),quest.get('target')))
+    for i,title in zip(positions,quest_texts(translate)):
+        quest=quests[i];context=quest.get('context') if isinstance(quest.get('context'),dict) else {}
+        if context.get('variety_version')==1 or (not context and quest.get('status')=='completed'):
+            result[i]=title
+        else:
+            context=context or {**current,'location':st.session_state.profile.get('location',''),'level':starting_level(quest.get('category',''))}
+            result[i]=personalize_title(title,quest,context,context.get('location',''),language,context.get('level',1))
     return result
 
 
@@ -374,8 +381,12 @@ def render_pillar(api, category):
         }.get(st.session_state.get("language", "en"), "Where you can grow next"))
             for slot in range(1,6):
                 plan=slot_plan(category,slot,starting_level(category),own)
+                active=next((q for q in own if q.get('slot')==slot and q.get('status')=='active'),None)
+                if active:
+                    plan={**plan,**active}
+                current_title=display_titles([plan])[0]
                 completed=[q for q in own if q.get('slot')==slot and q['status']=='completed']
-                with st.expander(quest_text(plan['title'])):
+                with st.expander(current_title):
                     step_label = {
                         "en": "Your current step",
                         "pt": "O teu passo atual",
@@ -384,7 +395,7 @@ def render_pillar(api, category):
                             }.get(st.session_state.get("language", "en"), "Your current step")
 
 
-                    st.write(f'**{step_label}:** {display_titles([plan])[0]}')
+                    st.text(f'{step_label}: {current_title}')
                     habit_message = {
             "en": f"{len(completed)} completed in this habit track. Each completion unlocks the next step.",
             "pt": f"{len(completed)} missões concluídas neste hábito. Cada conclusão desbloqueia o próximo passo.",
@@ -408,6 +419,7 @@ def render_pillar(api, category):
         )
 
                         st.write(f'{previous_label}: **{completed[-1]["target"]:,}** → {current_label}: **{plan["target"]:,}**')
+    render_insights(own,st.session_state.get('language','en'))
     st.subheader({
     "en": "Completed quests",
     "pt": "Missões concluídas",
@@ -496,6 +508,7 @@ def render_recap(api):
              delta=f'{recap["delta"]:+d} '+_tx('vs last week','vs semana passada','vs semaine dernière','vs letzte Woche'))
     b.metric(_tx('XP earned','XP ganho','XP gagnés','Verdiente XP'),recap['xp'])
     c.metric(_tx('Active days','Dias ativos','Jours actifs','Aktive Tage'),f'{recap["active_days"]}/7')
+    render_insights(everything,language)
     if recap['completed']:
         st.subheader(_tx('By pillar','Por área','Par domaine','Nach Bereich'))
         icons={'Squad':'👥','Competition':'⚔️'}

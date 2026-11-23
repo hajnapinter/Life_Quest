@@ -26,7 +26,7 @@ Deployment: Streamlit Community Cloud, `main` branch. Setup: [docs/deploy.md](do
 ```bash
 uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8502   # app at http://127.0.0.1:8502
 uv run pytest                                                                # Python tests
-node --test tests/*.test.cjs                                             # Google sign-in tests
+node --test tests/*.test.cjs checks/*.test.cjs                                             # Google sign-in tests
 ```
 
 The app needs `.streamlit/secrets.toml` with the Supabase URL and anon key (see *Local setup* below).
@@ -181,3 +181,11 @@ Use the Supabase secrets setup described above. This does not publish the app.
 ## Latest product fixes
 
 Country/city and target-language preferences personalise quests. Recap and CSV include multiplayer rewards and exact awarded XP. Same-tab reload restores the verified session; logout clears it. Squad membership and duel invitations can be managed without deleting history. See [scheduled reminders](docs/reminders.md) for installation and operational limits.
+
+## Quest variety and friend invitations
+
+New quests rotate through 84 locally translated practical activity variants (35 habit tracks); the free AI also rejects recently repeated titles, including number-only changes. Targets, difficulty and XP rules are unchanged. Existing assigned quests remain until completed; completed history retains its saved activity/context.
+
+Recap and pillar pages explain recorded progress: the most consistent track by active days, completed quests versus the same weekday last week, and the number of life areas explored. These are summaries of self-reported completions, not claims of real-world outcomes.
+
+Squad and pending Competition invitations now include a copyable link. After login/onboarding the recipient explicitly accepts or dismisses it. The Google PKCE handoff carries the pending invitation across tabs, without putting login tokens in links. Regression checks for these workflows live in `checks/` alongside the unchanged original `tests/` suite.

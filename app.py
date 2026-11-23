@@ -26,6 +26,7 @@ from account import photo as account_photo, ring as account_ring, render_photo_s
 from browser_session import sync_session
 from personalization import render_preferences
 from reminder_settings import render_reminder_settings
+from invitations import capture_invitation, render_invitation, valid_invitation
 
 
 st.set_page_config(page_title="Life Quest", page_icon="🌱", layout="centered")
@@ -298,7 +299,7 @@ def render_google_login() -> None:
         auth_notice("Google sign-in is not configured for this app address.", "error")
         return
     result = _google_component(supabase_url=config[0], public_key=config[1],
-                               redirect_url=redirect, enabled=enabled, code=code, key="google_login")
+                               redirect_url=redirect, enabled=enabled, code=code, invitation=st.session_state.get("pending_invitation"), key="google_login")
     if not isinstance(result, dict) or not code or result.get("code") != code:
         return
     if st.session_state.handled_oauth_code == code:
@@ -322,6 +323,10 @@ def render_google_login() -> None:
         if isinstance(expires_in, (int, float)) and expires_in > 0
         else None
     )
+    invitation=valid_invitation(result.get("invitation"))
+    if invitation:
+        st.session_state.pending_invitation=invitation
+        st.query_params.update({"join":invitation["kind"],"invite":invitation["code"]})
     st.session_state.user = user
     st.session_state.profile = None
     st.session_state.auth_message = None
@@ -794,6 +799,7 @@ def render_settings() -> None:
 def render_dashboard() -> None:
     """Display the main dashboard and page navigation."""
     profile = st.session_state.profile
+    render_invitation(api_request)
     col_profile, col_language = st.columns([3, 1], vertical_alignment="center")
 
     with col_profile:
@@ -855,6 +861,7 @@ def render_dashboard() -> None:
         render_settings()
 
 initialise_state()
+capture_invitation()
 
 if supabase_config() is None:
     st.error("Supabase is not configured for this deployment.")
@@ -891,6 +898,7 @@ if st.session_state.access_token:
 sync_session(api_request,supabase_config()[0])
 
 if not st.session_state.access_token:
+    render_invitation()
     render_auth()
 elif st.session_state.profile is None:
     if load_user_data():

@@ -84,7 +84,7 @@ Each quest whose target changed since the last time shows a small line such as "
 
 ## 6. Tests
 
-Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs` (Google sign-in). GitHub Actions runs both, plus a dependency audit, on every push (`.github/workflows/tests.yml`).
+Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs checks/*.test.cjs` (Google sign-in). GitHub Actions runs both, plus a dependency audit, on every push (`.github/workflows/tests.yml`).
 
 | File | Covers |
 |---|---|
@@ -133,7 +133,7 @@ Run: `uv run pytest` (Python) and `node --test tests/*.test.cjs` (Google sign-in
 - API errors are converted to user-friendly messages without exposing raw database details.
 - `tests/test_token_refresh.py` covers token rotation and refresh failures.
 - `tests/test_api_errors.py` covers malformed responses and safe error messages.
-- The latest local Python test run passed 190 tests (23 November 2026).
+- The latest local Python test run passed 203 tests (23 November 2026).
 
 ### Security verification still required
 
@@ -161,3 +161,11 @@ Five navigation destinations remain visible: Home, Recap, Squad, Competition and
 `session_component/` implements verified tab-scoped session restoration. `scripts/send_reminders.py`, `supabase/reminders.sql` and `.github/workflows/reminders.yml` implement opt-in localized email and competition settlement. See [reminders.md](reminders.md) for permissions, quotas, retry semantics and operational limits.
 
 `tests/test_product_fixes.py` covers exact recap XP, preserved progression, preferences, navigation, squad leave, session identity checks and no-send SMTP checks. `tests/session.test.cjs` covers storage rotation, logout, project scoping and foreign-message rejection. Fake API tests do not establish real database correctness; live SQL checks are separate.
+
+### Variety, feedback and invitation links
+
+`quest_variety.varied_plan` wraps the unchanged `slot_plan`, selecting a variant absent from the recent per-slot history and recording its index/version in the existing quest context. `render_variant` uses local translations and saved preferences for both active and completed library quests. AI-generated text keeps its own wording; a normalized recent-title check rejects exact and number-only repeats. No schema change is required.
+
+`progress_insights` uses UTC completion dates, excluding active/skipped/future rows and weekly XP bonuses. Its most consistent track is selected by distinct active days, then completions; language tracks are separated by saved target language. Comparisons stop at the same weekday in each week.
+
+`invitations` validates hexadecimal squad/competition codes and builds links only from a validated configured app URL. Pending invitations survive email login and the Google PKCE browser handoff. They remain inert until an authenticated explicit acceptance calls the existing join RPC; the database continues to enforce membership, recipient and closed-invitation rules. Copying uses Streamlit's native copy control. `checks/` covers these journeys, factual calculations, all local variants and the OAuth handoff.
