@@ -106,10 +106,12 @@ div[class*="st-key-quest_row_"] [data-testid="stMarkdownContainer"] p {font-weig
   bottom:calc(14px + env(safe-area-inset-bottom, 0px));
   width:min(680px, calc(100%% - 24px)); background:%(surface)s; border-radius:999px;
   padding:6px; box-shadow:0 14px 34px -14px rgba(43,35,48,.45);}
-.st-key-bottom_navigation [role="radiogroup"] {display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px;
+.st-key-bottom_navigation [data-testid="stElementContainer"], .st-key-bottom_navigation [data-testid="stRadio"] {width:100%% !important;}
+.st-key-bottom_navigation [role="radiogroup"] {width:100%% !important; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px;
   overflow:visible;}
 .st-key-bottom_navigation [role="radiogroup"]::-webkit-scrollbar {display:none;}
-.st-key-bottom_navigation [role="radiogroup"] label {white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
+.st-key-bottom_navigation [role="radiogroup"] > div {width:100%%; min-width:0;}
+.st-key-bottom_navigation [role="radiogroup"] label {width:100%%; white-space:normal; justify-content:center; text-align:center; min-width:0; border-radius:24px; padding:8px 3px; margin:0;
   color:%(muted)s; font-weight:500; transition:background .2s ease;}
 .st-key-bottom_navigation [role="radiogroup"] label > div:last-child {width:100%%; text-align:center;}
 .st-key-bottom_navigation [role="radiogroup"] label p {color:#1C1720; font-weight:600; text-align:center; font-size:11px; line-height:1.3; overflow-wrap:anywhere;}
@@ -178,7 +180,7 @@ div[class*="st-key-card_"] h3 {padding-top:0;}
   box-shadow:0 8px 22px -16px rgba(43,35,48,.45); min-width:0;}
 .lq-podium .p.first {background:linear-gradient(160deg,#FFD0A3,#FFB27F); padding-block:24px;}
 .lq-podium .medal {font-size:28px; line-height:1;}
-.lq-podium .who {font-weight:600; margin-top:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.lq-podium .who {font-weight:600; font-size:14px; max-width:100%%; margin-top:8px; overflow-wrap:anywhere; white-space:normal; line-height:1.2;}
 .lq-podium .pts {font-size:1.6rem; font-weight:300; letter-spacing:-.02em;}
 .lq-podium small, .lq-rank small {color:%(muted)s; font-size:12px;}
 .lq-rank {display:grid; grid-template-columns:2.2rem minmax(0,1fr) auto; gap:12px; align-items:center;
